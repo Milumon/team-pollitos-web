@@ -2155,9 +2155,9 @@ export default function LegacyAdminPanel({
             <p className="text-xs text-gray-400 mt-1 font-medium">Todo al día. Las nuevas solicitudes aparecerán aquí automáticamente.</p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-2">
             {pendingUsers.map((u: AdminUser) => (
-              <article key={u.id} className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-[0_4px_8px_rgba(0,0,0,.2)]">
+              <article key={u.id} className="min-w-0 bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-[0_4px_8px_rgba(0,0,0,.2)]">
                 <div className="flex gap-4">
                   <div className="w-12 h-12 rounded-2xl border border-neutral-700/60 bg-[#2b2d31] overflow-hidden flex items-center justify-center shrink-0 ">
                     {u.robloxAvatarUrl ? (
@@ -2206,19 +2206,19 @@ export default function LegacyAdminPanel({
                   );
                 })()}
 
-                <div className="flex gap-2 pt-2 border-t border-black/20">
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-black/20">
                   <a
                     href={`https://www.roblox.com/users/${u.robloxUser || ''}/profile`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 py-1.5 bg-[#2b2d31] hover:bg-[#20242D] text-white border border-neutral-700/60 text-center font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97]"
+                    className="min-w-0 py-1.5 bg-[#2b2d31] hover:bg-[#20242D] text-white border border-neutral-700/60 text-center font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97] whitespace-nowrap"
                   >
                     Ver Perfil ↗
                   </a>
                   <button
                     type="button"
                     onClick={() => handleVerifyLink(u.id, 'approve')}
-                    className="flex-1 py-1.5 bg-[#FFC200] hover:bg-[#ffe359] text-black border border-neutral-700/60 font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97]"
+                    className="min-w-0 py-1.5 bg-[#FFC200] hover:bg-[#ffe359] text-black border border-neutral-700/60 font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97] whitespace-nowrap"
                   >
                     Aceptar
                   </button>
@@ -2228,7 +2228,7 @@ export default function LegacyAdminPanel({
                       const reason = window.prompt('Motivo de rechazo:');
                       if (reason !== null) handleVerifyLink(u.id, 'reject', reason);
                     }}
-                    className="py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-neutral-700/60 font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97]"
+                    className="min-w-0 py-1.5 px-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-neutral-700/60 font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97] whitespace-nowrap"
                   >
                     Rechazar
                   </button>

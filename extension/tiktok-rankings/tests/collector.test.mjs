@@ -44,3 +44,13 @@ test("clasifica la request real de rankings y preserva enteros grandes", () => {
   assert.equal(parsed.data.rank_list[0].value, "18446744073709551616");
   assert.equal(parsed.data.rank_list[0].user.id, "9007199254740993");
 });
+
+test("genera datos condensados listos para copiar y serializar a JSON", () => {
+  const set = normalizeResponse(response(2, 2), { metric: "gifts", period: "7_days" });
+  const jsonString = JSON.stringify(set, null, 2);
+  const parsedBack = JSON.parse(jsonString);
+  assert.equal(parsedBack.metric, "gifts");
+  assert.equal(parsedBack.period, "7_days");
+  assert.ok(Array.isArray(parsedBack.entries));
+  assert.equal(parsedBack.entries[0].tiktok_id, "9007199254740993");
+});

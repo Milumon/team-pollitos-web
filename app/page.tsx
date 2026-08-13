@@ -18,14 +18,15 @@ import {
   Link2,
   LogIn,
 } from 'lucide-react';
+import { TikTokRankingLanding } from '@/components/tiktok-rankings/RankingViews';
+import { PwaInstallWidget, requestPwaInstall } from '@/components/PwaInstallWidget';
+import { MaintenanceBanner } from '@/components/MaintenanceBanner';
 import { supabase } from '@/lib/supabaseClient';
 import { buildAccessPath } from '@/lib/authRouting';
 import { Session } from '@supabase/supabase-js';
 import { Header } from '@/components/ui/Header';
 import { NavBar } from '@/components/ui/NavBar';
 import { Button } from '@/components/ui/Button';
-import { TikTokRankingLanding } from '@/components/tiktok-rankings/RankingViews';
-import { PwaInstallWidget, requestPwaInstall } from '@/components/PwaInstallWidget';
 import {
   MEMBER_DISPLAY_NAME_INPUT_PATTERN,
   MEMBER_DISPLAY_NAME_MAX_LENGTH,
@@ -647,6 +648,9 @@ export default function ComunidadPage() {
           onLogin={handleLogin}
           onLogout={handleLogout}
         />
+
+        {/* BANNER MANTENIMIENTO */}
+        <MaintenanceBanner />
 
         {/* CONTENEDOR PRINCIPAL */}
         <div className="mx-auto mt-8 flex max-w-6xl flex-col gap-16 px-4 sm:mt-12 sm:gap-20">
