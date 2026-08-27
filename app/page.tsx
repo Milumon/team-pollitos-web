@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { TikTokRankingLanding } from '@/components/tiktok-rankings/RankingViews';
 import { PwaInstallWidget, requestPwaInstall } from '@/components/PwaInstallWidget';
-import { MaintenanceBanner } from '@/components/MaintenanceBanner';
+
 import { supabase } from '@/lib/supabaseClient';
 import { buildAccessPath } from '@/lib/authRouting';
 import { Session } from '@supabase/supabase-js';
@@ -649,8 +649,6 @@ export default function ComunidadPage() {
           onLogout={handleLogout}
         />
 
-        {/* BANNER MANTENIMIENTO */}
-        <MaintenanceBanner />
 
         {/* CONTENEDOR PRINCIPAL */}
         <div className="mx-auto mt-8 flex max-w-6xl flex-col gap-16 px-4 sm:mt-12 sm:gap-20">
