@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { getSupabaseUser } from '@/lib/supabaseAdminAuth';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
-  if (!await getSupabaseUser(request)) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  }
-
   const limit = Number(request.nextUrl.searchParams.get('limit') ?? 50);
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     return NextResponse.json({ error: 'limit debe ser un entero entre 1 y 100' }, { status: 400 });
   }
+
   const { data: batches, error: batchesError } = await supabaseAdmin
     .from('tiktok_ranking_batches')
     .select('id,captured_at')
@@ -38,5 +33,5 @@ export async function GET(request: NextRequest) {
   );
   const snapshots = (batches ?? []).filter((batch) => completeBatchIds.get(batch.id) === 8).slice(0, limit);
 
-  return NextResponse.json({ snapshots }, { headers: { 'Cache-Control': 'private, no-store' } });
+  return NextResponse.json({ snapshots }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } });
 }

@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   const batchId = request.nextUrl.searchParams.get('batch_id');
   if (batchId) {
-    if (!profileId || !UUID_PATTERN.test(batchId)) {
+    if (!UUID_PATTERN.test(batchId)) {
       return NextResponse.json({ error: 'A valid authenticated session and batch_id are required' }, { status: 400 });
     }
 

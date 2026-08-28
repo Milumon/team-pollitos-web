@@ -34,6 +34,7 @@ export function firstSearchParam(value: string | string[] | undefined): string |
 export function parsePublicRankingFilters(input: {
   metrica?: string | null;
   periodo?: string | null;
+  fecha?: string | null;
 }) {
   const metric = input.metrica
     ? PUBLIC_METRIC_TO_INTERNAL[input.metrica as keyof typeof PUBLIC_METRIC_TO_INTERNAL] ?? DEFAULT_PUBLIC_RANKING_METRIC
@@ -45,6 +46,7 @@ export function parsePublicRankingFilters(input: {
   return {
     metric,
     period,
+    fecha: input.fecha || null,
     metrica: INTERNAL_TO_PUBLIC_METRIC[metric],
     periodo: INTERNAL_TO_PUBLIC_PERIOD[period],
   };
@@ -53,20 +55,21 @@ export function parsePublicRankingFilters(input: {
 export function buildPublicRankingHref(filters: {
   metric: RankingMetric;
   period: RankingPeriod;
+  fecha?: string | null;
 }) {
+  const params = new URLSearchParams();
   if (
-    filters.metric === DEFAULT_PUBLIC_RANKING_METRIC
-    && filters.period === DEFAULT_PUBLIC_RANKING_PERIOD
+    filters.metric !== DEFAULT_PUBLIC_RANKING_METRIC ||
+    filters.period !== DEFAULT_PUBLIC_RANKING_PERIOD ||
+    filters.fecha
   ) {
-    return '/clasificaciones';
+    params.set('metrica', INTERNAL_TO_PUBLIC_METRIC[filters.metric]);
+    params.set('periodo', INTERNAL_TO_PUBLIC_PERIOD[filters.period]);
+    if (filters.fecha) params.set('fecha', filters.fecha);
+    return `/clasificaciones?${params.toString()}`;
   }
 
-  const params = new URLSearchParams({
-    metrica: INTERNAL_TO_PUBLIC_METRIC[filters.metric],
-    periodo: INTERNAL_TO_PUBLIC_PERIOD[filters.period],
-  });
-
-  return `/clasificaciones?${params.toString()}`;
+  return '/clasificaciones';
 }
 
 export function resolvePublicRankingRoute(params: {
@@ -74,16 +77,17 @@ export function resolvePublicRankingRoute(params: {
 }) {
   const metrica = firstSearchParam(params.metrica);
   const periodo = firstSearchParam(params.periodo);
-  const filters = parsePublicRankingFilters({ metrica, periodo });
-  const expectedHref = buildPublicRankingHref(filters);
+  const fecha = firstSearchParam(params.fecha);
+  const filters = parsePublicRankingFilters({ metrica, periodo, fecha });
+  const expectedHref = buildPublicRankingHref({
+    metric: filters.metric,
+    period: filters.period,
+    fecha,
+  });
   const keys = Object.keys(params);
   const isBareCanonical = keys.length === 0;
-  const isNormalizedFilteredVariant = expectedHref !== '/clasificaciones'
-    && keys.length === 2
-    && !Array.isArray(params.metrica)
-    && !Array.isArray(params.periodo)
-    && metrica === filters.metrica
-    && periodo === filters.periodo;
+  const isNormalizedFilteredVariant =
+    keys.every((k) => ['metrica', 'periodo', 'fecha'].includes(k));
 
   return {
     filters,
