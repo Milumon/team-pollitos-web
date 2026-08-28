@@ -1,3 +1,4 @@
+import { Copy, Check, Sparkles } from 'lucide-react';
 'use client';
 
 import { FormEvent, type ReactNode, useEffect, useRef, useState } from 'react';
@@ -417,65 +418,96 @@ function StepThree({
 
   return (
     <Card title="Entra al servidor y escribe el comando" icon="⚡">
-      {/* Banner de Plataforma */}
-      <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 mb-4">
-        <span className="font-display font-bold text-xs text-gray-700">
-          {isJava ? '☕ Plataforma: Minecraft Java' : '📱 Plataforma: Minecraft Bedrock'}
-        </span>
-        <span className="text-xs font-mono font-bold text-[#2D3139]">@{username}</span>
-      </div>
-
-      {/* 1. Dirección del Servidor */}
-      <div className="rounded-xl border border-[#E8DFC5] bg-[#FFFDF5] p-3.5 mb-4">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Dirección del Servidor</p>
-            <p className="font-mono text-base font-black text-[#2D3139]">mc.milumon.dev</p>
+      {/* Dark HUD Minecraft In-Game Server Card */}
+      <div className="bg-[#141517] border-2 border-neutral-700/90 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-4 text-white font-sans">
+        {/* Header with status & platform */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-800 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+            <span className="font-display font-bold text-xs uppercase tracking-wider text-gray-200">
+              Datos de Conexión al Servidor
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={onCopyIp}
-            className="rounded-lg bg-[#FFD500] hover:brightness-105 px-3 py-1.5 text-xs font-display font-black text-black transition-all cursor-pointer shrink-0"
-          >
-            {ipCopied ? '✅ ¡Copiada!' : 'Copiar IP'}
-          </button>
+
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#2b2d31] border border-neutral-700/60 text-[11px] font-bold text-[#FFC200]">
+              <Sparkles className="w-3 h-3 text-[#FFC200]" /> {isJava ? '☕ Java' : '📱 Bedrock'}
+            </span>
+            <span className="text-xs font-mono font-bold text-gray-300">@{username}</span>
+          </div>
+        </div>
+
+        {/* 1. Dirección del Servidor */}
+        <div className="space-y-1">
+          <label className="block text-xs font-bold text-gray-300 tracking-wide font-mono">
+            Dirección del Servidor (IP)
+          </label>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-black border-2 border-neutral-600 rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold text-[#FFC200] select-all shadow-inner">
+              mc.milumon.dev
+            </div>
+            <button
+              type="button"
+              onClick={onCopyIp}
+              className="px-4 py-2.5 bg-[#FFC200] hover:brightness-105 text-black rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+            >
+              {ipCopied ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5" />}
+              {ipCopied ? '¡Copiada!' : 'Copiar IP'}
+            </button>
+          </div>
+        </div>
+
+        {/* 2. Comando /link */}
+        <div className="space-y-1.5 pt-1">
+          <label className="block text-xs font-bold text-emerald-400 tracking-wide font-mono flex items-center justify-between">
+            <span>Comando a enviar en el chat:</span>
+            <span className="text-[10px] text-gray-400 font-sans">Abre el chat con tecla T</span>
+          </label>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-black border-2 border-emerald-500/80 rounded-xl px-3.5 py-2.5 text-base font-mono font-black text-emerald-400 select-all shadow-[0_0_12px_rgba(16,185,129,0.15)]">
+              /link {code}
+            </div>
+            <button
+              type="button"
+              onClick={onCopy}
+              className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? '¡Copiado!' : 'Copiar /link'}
+            </button>
+          </div>
+        </div>
+
+        {/* 3. Pasos Rápidos de Supervivencia */}
+        <div className="p-3 bg-[#1e1f22] border border-neutral-800 rounded-xl space-y-1.5 text-xs text-gray-300">
+          <p className="flex items-center gap-2 font-medium">
+            <span className="w-4 h-4 rounded-full bg-[#FFC200]/20 text-[#FFC200] font-mono font-bold text-[10px] flex items-center justify-center shrink-0">1</span>
+            <span>Entra a <strong className="text-white font-mono">mc.milumon.dev</strong> en Minecraft.</span>
+          </p>
+          <p className="flex items-center gap-2 font-medium">
+            <span className="w-4 h-4 rounded-full bg-[#FFC200]/20 text-[#FFC200] font-mono font-bold text-[10px] flex items-center justify-center shrink-0">2</span>
+            <span>Abre el chat (tecla <strong className="text-white">T</strong>) y envía <strong className="text-emerald-400 font-mono">/link {code}</strong>.</span>
+          </p>
+          <p className="flex items-center gap-2 font-medium">
+            <span className="w-4 h-4 rounded-full bg-[#FFC200]/20 text-[#FFC200] font-mono font-bold text-[10px] flex items-center justify-center shrink-0">3</span>
+            <span>¡Listo! Tu cuenta se vinculará de inmediato.</span>
+          </p>
+        </div>
+
+        {/* Temporizador */}
+        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-400/90 pt-1">
+          <span>⏰ Código válido por {countdown}</span>
+          <span className="text-gray-500 font-normal">
+            (vence a las {expiresAt ? new Date(expiresAt).toLocaleTimeString('es-PE') : 'pronto'})
+          </span>
         </div>
       </div>
-
-      {/* 2. Comando a escribir */}
-      <div className="rounded-2xl border-2 border-emerald-400 bg-[#ECFDF3] p-4 text-center space-y-3">
-        <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-          Escribe este comando en el chat de Minecraft:
-        </p>
-        <div className="bg-white border border-emerald-200 rounded-xl py-2 px-3 font-mono text-2xl font-black tracking-wider text-emerald-800">
-          /link {code}
-        </div>
-        <button
-          type="button"
-          onClick={onCopy}
-          className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 font-display font-bold text-sm transition-all cursor-pointer"
-        >
-          {copied ? '✅ ¡Comando Copiado!' : '📋 Copiar comando /link'}
-        </button>
-      </div>
-
-      {/* Pasos rápidos */}
-      <div className="mt-4 bg-white border border-gray-100 rounded-xl p-3 space-y-1.5 text-xs font-sans text-gray-600">
-        <p><strong>1.</strong> Entra a <strong>mc.milumon.dev</strong> en Minecraft.</p>
-        <p><strong>2.</strong> Abre el chat (tecla <strong>T</strong>) y envía <strong>/link {code}</strong>.</p>
-        <p><strong>3.</strong> ¡Listo! Tu cuenta se vinculará de inmediato.</p>
-      </div>
-
-      {/* Temporizador */}
-      <p className="mt-4 text-center text-xs font-bold text-amber-700">
-        ⏰ Código válido por {countdown} (vence a las {expiresAt ? new Date(expiresAt).toLocaleTimeString('es-PE') : 'pronto'}).
-      </p>
 
       {/* Botones de acción */}
       <button
         type="button"
         onClick={onNext}
-        className="mt-5 w-full rounded-xl bg-[#FFD500] hover:brightness-105 px-5 py-3 font-display font-black text-black transition-all cursor-pointer"
+        className="mt-5 w-full rounded-xl bg-[#FFD500] hover:brightness-105 px-5 py-3 font-display font-black text-black transition-all cursor-pointer shadow-sm"
       >
         Ya escribí /link en el chat ✅
       </button>
