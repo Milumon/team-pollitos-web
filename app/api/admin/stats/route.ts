@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     try {
       const result = await supabaseAdmin
         .from('profiles')
-        .select('id, roblox_user, roblox_display_name, roblox_avatar_url, roblox_verified_at, tiktok_user, link_status, rejection_reason, is_admin, testimonial, testimonial_approved');
+        .select('id, roblox_user, roblox_display_name, roblox_avatar_url, roblox_verified_at, tiktok_user, link_status, rejection_reason, is_admin, testimonial, testimonial_approved, minecraft_rank');
       profData = result.data || [];
       profError = result.error;
     } catch (e) {
@@ -255,6 +255,7 @@ export async function GET(request: NextRequest) {
         tiktokUser: robloxProfile?.tiktok_user || null,
         linkStatus: robloxProfile?.link_status || 'none',
         rejectionReason: robloxProfile?.rejection_reason || null,
+        minecraftRank: (robloxProfile as any)?.minecraft_rank || null,
         isAdmin: robloxProfile?.is_admin || false,
         soundboardDisabled: robloxProfile?.soundboard_disabled || false,
         permUploadImages: robloxProfile?.perm_upload_images ?? true,

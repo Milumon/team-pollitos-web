@@ -11,6 +11,7 @@ export type AdminUser = {
   tiktokUser: string | null;
   linkStatus: 'none' | 'pending' | 'approved' | 'rejected';
   rejectionReason: string | null;
+  minecraftRank?: 'pollito_admin' | 'pollito_moderador' | 'pollito_oficial' | 'pollito_invitado' | string | null;
   votedCount: number;
   totalCategories: number;
   votedPercentage: number;
@@ -47,7 +48,7 @@ export function getAdminUserStatusLabel(status: AdminUser['linkStatus']) {
     pending: 'Pendiente',
     approved: 'Aprobado',
     rejected: 'Rechazado',
-  }[status];
+  }[status] || 'Sin verificar';
 }
 
 export type AdminDashboard = {

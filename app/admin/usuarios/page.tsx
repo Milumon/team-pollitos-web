@@ -1,5 +1,5 @@
-import LegacyAdminPanel from '@/components/admin/LegacyAdminPanel';
+import { AdminUsersList } from '@/components/admin/AdminUsersList';
 
 export default function AdminUsersPage() {
-  return <LegacyAdminPanel view="users" />;
+  return <AdminUsersList />;
 }
