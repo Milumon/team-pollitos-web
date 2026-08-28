@@ -19,6 +19,8 @@ import { AdminHeader } from '@/components/admin/AdminHeader';
 import { OverlayCanvas, CANVAS_W, CANVAS_H, type OverlayParticle, type OverlayAnimationType } from '@/components/OverlayCanvas';
 import MediaSubmissionsPanel from '@/components/admin/MediaSubmissionsPanel';
 import MediaUploadForm from '@/components/console/MediaUploadForm';
+import MinecraftAdminView from '@/components/admin/MinecraftAdminView';
+import { ChatOverlayAdminView } from '@/components/admin/ChatOverlayAdminView';
 
 function maskEmail(email: string): string {
   if (!email) return '';
@@ -286,6 +288,7 @@ export type AdminView =
   | 'agenda'
   | 'stream'
   | 'overlay-design'
+  | 'chat-overlay'
   | 'soundboard'
   | 'media-submissions'
   | 'stream-status'
@@ -3540,6 +3543,10 @@ export default function LegacyAdminPanel({
         return renderStreamSettingsTab();
       case 'overlay-design':
         return renderOverlayDesignTab();
+      case 'chat-overlay':
+        return <ChatOverlayAdminView />;
+      case 'minecraft':
+        return <MinecraftAdminView />;
       case 'soundboard':
         return renderSoundboardTab();
       case 'media-submissions':
@@ -3707,6 +3714,9 @@ export default function LegacyAdminPanel({
             </Link>
             <Link href="/admin/overlay" aria-current={view === 'overlay-design' ? 'page' : undefined} onClick={() => setMobileMenuOpen(false)} className={navBtnClass('overlay-design')}>
               <span>🎨</span> Overlay
+            </Link>
+            <Link href="/admin/chat-overlay" aria-current={view === 'chat-overlay' ? 'page' : undefined} onClick={() => setMobileMenuOpen(false)} className={navBtnClass('chat-overlay')}>
+              <span>💬</span> Chat TikTok
             </Link>
             <Link href="/admin/sonidos" aria-current={view === 'soundboard' ? 'page' : undefined} onClick={() => setMobileMenuOpen(false)} className={navBtnClass('soundboard')}>
               <span>🔊</span> Sonidos

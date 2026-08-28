@@ -1,5 +1,5 @@
-import MinecraftAdminView from '@/components/admin/MinecraftAdminView';
+import LegacyAdminPanel from '@/components/admin/LegacyAdminPanel';
 
 export default function AdminMinecraftPage() {
-  return <MinecraftAdminView />;
+  return <LegacyAdminPanel view="minecraft" />;
 }

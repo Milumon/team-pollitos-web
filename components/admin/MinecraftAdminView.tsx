@@ -307,17 +307,19 @@ export default function MinecraftAdminView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,.25)] flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Servidor</p>
-          <h1 className="mt-1 font-display text-2xl font-bold text-white">Minecraft Admin</h1>
-          <p className="mt-1 text-xs font-semibold text-gray-400">
+          <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">Servidor & Juego</span>
+          <h2 className="font-display font-bold text-xl text-white mt-0.5 flex items-center gap-2">
+            ⛏️ Minecraft Admin
+          </h2>
+          <p className="text-xs text-gray-400 mt-1 font-semibold">
             Gestiona vinculaciones, rangos, anuncios globales y métricas en vivo.
           </p>
         </div>
         <button
           onClick={loadAll}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs font-bold text-neutral-300 rounded-xl transition cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-white/5 hover:bg-white/10 text-xs font-bold text-gray-300 rounded-xl transition cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" /> Refrescar
         </button>

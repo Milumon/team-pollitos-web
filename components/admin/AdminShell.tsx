@@ -38,6 +38,8 @@ const legacyShellRoutes = new Set([
   '/admin/votos',
   '/admin/transmision',
   '/admin/overlay',
+  '/admin/chat-overlay',
+  '/admin/minecraft',
   '/admin/sonidos',
   '/admin/multimedia',
   '/admin/estado-transmision',
