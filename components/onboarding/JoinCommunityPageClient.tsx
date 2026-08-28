@@ -14,6 +14,7 @@ import {
   Loader2,
   LogIn,
   AlertCircle,
+  AlertTriangle,
   HelpCircle,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
@@ -30,12 +31,14 @@ export default function JoinCommunityPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSource = searchParams?.get('from');
+  const returnTo = searchParams?.get('returnTo');
 
   // Auth states
   const [session, setSession] = useState<any>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [userStatus, setUserStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none');
   const [userRank, setUserRank] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
 
   // Form states
   const [memberType, setMemberType] = useState<'pollito_invitado' | 'pollito_oficial'>('pollito_invitado');
@@ -69,13 +72,17 @@ export default function JoinCommunityPageClient() {
         if (currentSession?.user?.id) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('link_status, minecraft_rank, roblox_user, roblox_display_name, roblox_avatar_url')
+            .select('link_status, minecraft_rank, roblox_user, roblox_display_name, roblox_avatar_url, tiktok_user, rejection_reason')
             .eq('id', currentSession.user.id)
             .maybeSingle();
 
           if (profile) {
             setUserStatus((profile.link_status as any) || 'none');
             setUserRank(profile.minecraft_rank || null);
+            setRejectionReason(profile.rejection_reason || null);
+            if (profile.tiktok_user) {
+              setTiktokUser(profile.tiktok_user);
+            }
             if (profile.roblox_user) {
               setRobloxUser(profile.roblox_user);
               setVerifiedRobloxProfile({
@@ -97,6 +104,15 @@ export default function JoinCommunityPageClient() {
 
     void checkUser();
   }, []);
+
+  const handleGoogleLogin = async () => {
+    const dest = returnTo ? `/unirse?returnTo=${encodeURIComponent(returnTo)}` : '/unirse';
+    const redirectTo = `${window.location.origin}/api/auth/callback?retorno=${encodeURIComponent(dest)}`;
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    });
+  };
 
   const handleVerifyRoblox = async () => {
     setFormError(null);
@@ -152,7 +168,7 @@ export default function JoinCommunityPageClient() {
     setFormError(null);
 
     if (!session) {
-      window.location.assign(buildAccessPath('/unirse'));
+      handleGoogleLogin();
       return;
     }
 
@@ -238,23 +254,46 @@ export default function JoinCommunityPageClient() {
             🐣 Unirse al Team Pollito
           </h1>
           <p className="text-sm text-gray-400 font-medium max-w-md mx-auto">
-            Elige tu membresía para formar parte de la comunidad oficial de Milumon y acceder al servidor de Minecraft.
+            Configura tu cuenta oficial para identificarte en la comunidad, directos de TikTok y servidor de Minecraft.
           </p>
         </div>
 
         {/* Source Hint for Minecraft */}
-        {fromSource === 'minecraft' && !formSuccess && userStatus !== 'approved' && (
+        {(fromSource === 'minecraft' || returnTo?.includes('minecraft')) && !formSuccess && userStatus !== 'approved' && (
           <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs font-semibold flex items-center gap-3">
             <Gamepad2 className="w-5 h-5 text-[#FFC200] shrink-0" />
             <div>
               <strong className="text-white block font-bold">¡Estás a un paso de jugar en Minecraft!</strong>
-              Completa tu registro como <strong>Pollito Invitado</strong> (es gratis e instantáneo) para poder vincular tu usuario.
+              Elige <strong>Pollito Invitado</strong> (es gratis e instantáneo) para poder vincular tu usuario.
             </div>
           </div>
         )}
 
-        {/* User Already Approved Card */}
-        {userStatus === 'approved' && !formSuccess && (
+        {/* NOT LOGGED IN CARD */}
+        {!session && (
+          <div className="bg-[#1e2026] border border-neutral-700/60 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-5">
+            <div className="w-12 h-12 rounded-2xl bg-[#FFC200]/20 text-[#FFC200] mx-auto flex items-center justify-center text-2xl font-bold">
+              🔑
+            </div>
+            <div className="space-y-1">
+              <h2 className="font-display font-bold text-xl text-white">Inicia sesión para registrarte</h2>
+              <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                Conecta tu cuenta de Google para guardar tu progreso, sincronizar tu avatar de Roblox y jugar en el servidor.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="w-full py-3.5 px-4 bg-[#FFC200] hover:brightness-105 text-black font-display font-black text-sm rounded-xl transition cursor-pointer shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-4 h-4" /> Continuar con Google
+            </button>
+          </div>
+        )}
+
+        {/* USER ALREADY APPROVED CARD */}
+        {session && userStatus === 'approved' && !formSuccess && (
           <div className="p-6 rounded-3xl bg-[#1e2026] border border-emerald-500/40 shadow-2xl text-center space-y-4">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center text-2xl">
               ✓
@@ -283,31 +322,63 @@ export default function JoinCommunityPageClient() {
           </div>
         )}
 
-        {/* User Pending Review Card */}
-        {userStatus === 'pending' && !formSuccess && (
+        {/* USER PENDING REVIEW CARD */}
+        {session && userStatus === 'pending' && !formSuccess && (
           <div className="p-6 rounded-3xl bg-[#1e2026] border border-amber-500/40 shadow-2xl text-center space-y-4">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center text-2xl">
               ⏳
             </div>
             <div>
               <h2 className="font-display font-bold text-xl text-white">Solicitud en Revisión</h2>
-              <p className="text-xs text-gray-400 mt-1">
-                Tu postulación para <strong>Pollito Oficial</strong> está siendo evaluada por los administradores.
+              <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                Tu postulación para <strong>Pollito Oficial</strong> está siendo revisada por los administradores.
               </p>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col sm:flex-row gap-3">
               <Link
                 href="/minecraft"
-                className="inline-flex py-3 px-6 bg-[#FFC200] hover:brightness-105 text-black font-display font-bold text-xs rounded-xl transition items-center justify-center gap-2"
+                className="flex-1 py-3 px-4 bg-[#FFC200] hover:brightness-105 text-black font-display font-bold text-xs rounded-xl transition text-center"
               >
-                Ver Servidor de Minecraft
+                Explorar Servidor Minecraft
               </Link>
+              <button
+                type="button"
+                onClick={() => { setUserStatus('none'); setMemberType('pollito_invitado'); }}
+                className="flex-1 py-3 px-4 bg-white/5 hover:bg-white/10 text-white font-display font-bold text-xs rounded-xl transition border border-white/10"
+              >
+                Cambiar a Pollito Invitado
+              </button>
             </div>
           </div>
         )}
 
-        {/* Success Screen After Submit */}
+        {/* USER REJECTED CARD */}
+        {session && userStatus === 'rejected' && !formSuccess && (
+          <div className="p-6 rounded-3xl bg-[#1e2026] border border-red-500/40 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 mx-auto flex items-center justify-center text-2xl">
+              <AlertTriangle className="w-6 h-6 text-red-400" />
+            </div>
+            <div>
+              <h2 className="font-display font-bold text-xl text-red-400">Solicitud Rechazada</h2>
+              <p className="text-xs text-gray-400 mt-1">
+                Motivo: <em className="text-gray-300">&quot;{rejectionReason || 'Datos no coincidentes'}&quot;</em>
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => { setUserStatus('none'); setIsReturning(false); }}
+                className="w-full py-3 px-4 bg-[#FFC200] hover:brightness-105 text-black font-display font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                Corregir y Enviar Nuevamente
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* SUCCESS SCREEN AFTER SUBMIT */}
         {formSuccess && (
           <div className="p-6 rounded-3xl bg-[#1e2026] border border-emerald-500/50 shadow-2xl text-center space-y-5 animate-in fade-in">
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center text-3xl shadow-inner">
@@ -330,17 +401,17 @@ export default function JoinCommunityPageClient() {
                 <Gamepad2 className="w-4 h-4" /> Vincular Cuenta de Minecraft
               </Link>
               <Link
-                href="/minecraft"
+                href="/"
                 className="flex-1 py-3 px-4 bg-white/5 hover:bg-white/10 text-white font-display font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 border border-white/10"
               >
-                Explorar Hub y Tops
+                Ir al Inicio
               </Link>
             </div>
           </div>
         )}
 
-        {/* Main Onboarding Form */}
-        {userStatus !== 'approved' && userStatus !== 'pending' && !formSuccess && (
+        {/* MAIN REGISTRATION FORM (WHEN LOGGED IN AND STATUS === 'none') */}
+        {session && userStatus === 'none' && !formSuccess && (
           <div className="bg-[#1e2026] border border-neutral-700/60 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
             
             {/* Step 1: Membership Type Selection */}

@@ -25,8 +25,19 @@ export default function AccessPageClient() {
         } = await supabase.auth.getUser();
 
         if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('link_status')
+            .eq('id', user.id)
+            .maybeSingle();
+
           if (!cancelled) {
-            router.replace(retorno);
+            if (!profile || profile.link_status === 'none') {
+              const dest = retorno && retorno !== '/' ? `/unirse?returnTo=${encodeURIComponent(retorno)}` : '/unirse';
+              router.replace(dest);
+            } else {
+              router.replace(retorno);
+            }
           }
           return;
         }
@@ -58,41 +69,48 @@ export default function AccessPageClient() {
     });
 
     if (authError) {
-      setError(authError.message);
+      setError(authError.message || 'No se pudo iniciar sesión con Google.');
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#FDFBF7] text-[#2D3139] flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md rounded-[28px] border-3 border-[#2D3139] bg-white p-7 shadow-[10px_10px_0_#FFD500] space-y-5">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border-3 border-[#2D3139] bg-[#FFD500] text-black">
-          {isSyncing ? <Loader2 className="h-6 w-6 animate-spin" /> : <ShieldAlert className="h-6 w-6" />}
-        </div>
-
+    <main className="min-h-screen bg-[#FDFBF7] text-[#2D3139] flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white border border-[#E8DFC5] rounded-3xl p-8 shadow-[0_8px_30px_rgba(0,0,0,0.06)] text-center space-y-6">
         <div className="space-y-2">
-          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.28em] text-[#D4A000]">
-            Acceso seguro
-          </p>
-          <h1 className="font-display text-3xl font-bold leading-none">Entrar a la comunidad</h1>
-          <p className="text-sm font-semibold text-[#475569]">
-            Inicia sesión con Google para volver exactamente a la ruta que solicitaste.
+          <span className="text-4xl">🐣</span>
+          <h1 className="font-display font-black text-2xl text-[#2D3139]">Acceso a Team Pollito</h1>
+          <p className="text-xs text-gray-500 font-semibold">
+            Inicia sesión con tu cuenta de Google para identificarte en la comunidad y Minecraft.
           </p>
         </div>
 
-        {error ? (
-          <div className="rounded-2xl border-3 border-[#2D3139] bg-[#FFF0B8] px-4 py-3 text-xs font-bold text-[#5A4500]">
-            {error}
+        {error && (
+          <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-600 flex items-center gap-2 text-left">
+            <ShieldAlert className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
           </div>
-        ) : null}
+        )}
 
         <button
           type="button"
-          onClick={handleLogin}
           disabled={isSyncing}
-          className="w-full rounded-2xl border-3 border-[#2D3139] bg-[#FFD500] px-4 py-3 font-display text-sm font-semibold text-black transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:cursor-wait disabled:opacity-70"
+          onClick={handleLogin}
+          className="w-full py-3.5 px-4 bg-[#FFD500] hover:brightness-105 text-black font-display font-black text-xs rounded-2xl transition cursor-pointer shadow-[3px_3px_0_#D4A000] flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          {isSyncing ? 'Validando sesión...' : 'Continuar con Google'}
+          {isSyncing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" /> Verificando sesión...
+            </>
+          ) : (
+            <>
+              <span>Continuar con Google</span>
+            </>
+          )}
         </button>
+
+        <p className="text-[11px] text-gray-400">
+          Si es tu primera vez, serás dirigido automáticamente a completar tu registro.
+        </p>
       </div>
     </main>
   );

@@ -20,6 +20,22 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     response.headers.set('location', new URL(buildAccessPath(retorno), origin).toString());
+    return response;
+  }
+
+  // Check if new/unconfigured member needs onboarding
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('link_status')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (!profile || profile.link_status === 'none') {
+      const dest = retorno && retorno !== '/' ? `/unirse?returnTo=${encodeURIComponent(retorno)}` : '/unirse';
+      response.headers.set('location', new URL(dest, origin).toString());
+    }
   }
 
   return response;
