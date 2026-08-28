@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowRight, CalendarDays, Crown, Loader2, Medal, Trophy } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, Copy, Crown, Flame, Loader2, Medal, Share2, Sparkles, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTikTokRankings } from './useTikTokRankings';
+import type { Session } from '@supabase/supabase-js';
+import { Header } from '@/components/ui/Header';
+import { NavBar } from '@/components/ui/NavBar';
+import { supabase } from '@/lib/supabaseClient';
 import { TopThreePodium } from './TopThreePodium';
 import { buildPublicRankingHref, parsePublicRankingFilters } from '@/lib/publicRankingRoute';
 import { MAX_RANKING_ENTRIES_PER_SNAPSHOT } from '@/lib/tiktokRankingLimits';
@@ -66,16 +70,18 @@ function Avatar({
   const imgSrc = robloxUrl || tiktokUrl;
 
   return (
-    <div className={`${large ? 'h-11 w-11' : 'h-8 w-8'} flex shrink-0 items-center justify-center overflow-hidden rounded-full border ${entry.profile ? 'border-[#FFC200]' : 'border-neutral-700'} bg-[#35373d]`}>
+    <div className={`${large ? 'h-11 w-11' : 'h-9 w-9'} relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 ${entry.profile ? 'border-[#FFD500] ring-2 ring-yellow-400/20' : 'border-neutral-200'} bg-[#FFF7DC]`}>
       {imgSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={imgSrc}
-          alt={`Avatar de @${entry.display_id}`}
+          alt=""
+          aria-hidden="true"
           className="h-full w-full object-cover"
+          style={robloxUrl ? { transform: 'scale(1.4) translateY(-5%)' } : undefined}
         />
       ) : (
-        <span className={large ? 'text-lg' : 'text-sm'}>♪</span>
+        <span className="text-sm">🐣</span>
       )}
     </div>
   );
@@ -89,9 +95,10 @@ function EmptyState({
   detail: string;
 }) {
   return (
-    <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center">
-      <p className="font-display text-sm text-[#2D3139]">{title}</p>
-      <p className="mt-1 text-xs text-gray-400">{detail}</p>
+    <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-12 text-center">
+      <Trophy className="w-8 h-8 text-neutral-400 mx-auto mb-2 opacity-50" />
+      <p className="font-display font-bold text-sm text-[#2D3139]">{title}</p>
+      <p className="mt-1 text-xs text-neutral-500">{detail}</p>
     </div>
   );
 }
@@ -99,9 +106,9 @@ function EmptyState({
 function StatusState({ state }: { state: RankingsState }) {
   if (state.loading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-12 text-xs font-bold uppercase tracking-wide text-gray-500">
-        <Loader2 className="h-4 w-4 animate-spin text-[#FFC200]" />
-        Cargando ranking...
+      <div className="flex items-center justify-center gap-2 py-16 text-xs font-bold uppercase tracking-widest text-[#9A8D70]">
+        <Loader2 className="h-5 w-5 animate-spin text-[#FFD500]" />
+        Cargando clasificaciones de TikTok...
       </div>
     );
   }
@@ -135,29 +142,72 @@ function RankingRows({
   limit?: number;
   metric?: RankingMetric;
 }) {
+  const visible = entries.slice(0, limit);
+
   return (
-    <div className={dark ? 'space-y-2' : 'space-y-3'}>
-      {entries.slice(0, limit).map((entry) => {
-        const winner = entry.position === 1;
+    <div className="space-y-2.5">
+      {visible.map((entry) => {
+        const isTopTen = entry.position <= 10;
         const linked = Boolean(entry.profile);
-        const rowClass = dark
-          ? linked ? 'border-[#FFC200]/35 bg-[#FFC200]/5' : 'border-neutral-700/40 bg-[#2b2d31]'
-          : linked ? 'border-[#FFC200]/35 bg-[#FFF9E6]' : 'border-gray-100 bg-white';
 
         return (
-          <div key={`${entry.display_id}-${entry.position}`} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${rowClass}`}>
-            <span className={`w-6 text-center font-black ${winner ? `text-lg ${dark ? 'text-[#D4A000]' : 'text-[#D4A000]'}` : `text-xs ${dark ? 'text-gray-400' : 'text-gray-400'}`}`}>
-              {winner ? <Crown className="mx-auto h-4 w-4" /> : entry.position}
-            </span>
-            <Avatar entry={entry} large={winner} />
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <p className={`truncate text-xs font-bold ${dark ? 'text-white' : 'text-[#2D3139]'}`}>{entry.nickname || `@${entry.display_id}`}</p>
-                {linked && <span className="shrink-0 rounded-full bg-[#FFC200]/15 px-2 py-0.5 text-[8px] font-black uppercase text-[#D4A000]">Miembro</span>}
+          <div
+            key={`${entry.display_id}-${entry.position}`}
+            className={`flex items-center justify-between gap-3 rounded-2xl border p-3 sm:px-4 sm:py-3 transition-all hover:shadow-xs ${
+              dark
+                ? linked
+                  ? 'border-[#FFD500]/30 bg-[#FFD500]/5'
+                  : 'border-neutral-800 bg-neutral-900/60'
+                : isTopTen
+                ? 'border-[#FFE799] bg-linear-to-r from-[#FFFDF5] to-[#FFFBEA]'
+                : 'border-neutral-100 bg-white hover:border-neutral-200'
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              {/* Rank Badge */}
+              <div
+                className={`flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl font-mono text-xs font-black ${
+                  isTopTen
+                    ? 'bg-[#FFD500] text-black shadow-xs'
+                    : dark
+                    ? 'bg-neutral-800 text-neutral-400'
+                    : 'bg-neutral-100 text-neutral-600'
+                }`}
+              >
+                {entry.position}
               </div>
-              {linked && <p className="truncate text-[10px] text-gray-500">Perfil vinculado: @{entry.profile?.roblox_user}</p>}
+
+              {/* Avatar */}
+              <Avatar entry={entry} />
+
+              {/* Names */}
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className={`truncate text-xs sm:text-sm font-black ${dark ? 'text-white' : 'text-[#2D3139]'}`}>
+                    {entry.nickname || `@${entry.display_id}`}
+                  </p>
+                  {linked && (
+                    <span className="shrink-0 rounded-full bg-[#FFD500]/20 px-2 py-0.2 text-[8px] font-black uppercase text-[#8B6B00]">
+                      Miembro
+                    </span>
+                  )}
+                </div>
+                <p className="truncate text-[10px] text-neutral-400">
+                  {linked ? `Perfil vinculado: @${entry.profile?.roblox_user}` : `@${entry.display_id}`}
+                </p>
+              </div>
             </div>
-            <span className={`shrink-0 text-xs font-bold font-mono ${dark ? 'text-gray-300' : 'text-[#2D3139]'}`}>{formatValue(entry.value, metric)}</span>
+
+            {/* Value Pill */}
+            <div className="shrink-0">
+              <span className={`inline-block px-3 py-1 rounded-xl text-xs font-mono font-black ${
+                dark
+                  ? 'bg-neutral-800 text-yellow-400'
+                  : 'bg-neutral-100 text-[#2D3139] border border-neutral-200/60'
+              }`}>
+                {formatValue(entry.value, metric)}
+              </span>
+            </div>
           </div>
         );
       })}
@@ -178,16 +228,64 @@ function RankingControls({
   onPeriod: (value: RankingPeriod) => void;
   dark?: boolean;
 }) {
-  const selectClass = dark ? 'border border-neutral-700 bg-[#20232a] text-white' : 'border border-gray-200 bg-white text-[#2D3139]';
-  const focusClass = 'focus:border-[#FFC200]';
+  const metricOptions: { value: RankingMetric; label: string; icon: string }[] = [
+    { value: 'viewers', label: 'Espectadores', icon: '⏱️' },
+    { value: 'gifts', label: 'Regalos', icon: '🎁' },
+  ];
+
+  const periodOptions: { value: RankingPeriod; label: string; icon: string }[] = [
+    { value: 'last_live', label: 'Último Live', icon: '🔴' },
+    { value: '7_days', label: '7 Días', icon: '⚡' },
+    { value: '28_days', label: '28 Días', icon: '🏆' },
+  ];
+
   return (
-    <div className="flex flex-wrap gap-2">
-      <select aria-label="Métrica de clasificación" value={metric} onChange={(event) => onMetric(event.target.value as RankingMetric)} className={`rounded-xl px-3 py-2 text-xs font-bold outline-none ${focusClass} ${selectClass}`}>
-        {RANKING_METRICS.map((item) => <option key={item} value={item}>{METRIC_LABELS[item]}</option>)}
-      </select>
-      <select aria-label="Período de clasificación" value={period} onChange={(event) => onPeriod(event.target.value as RankingPeriod)} className={`rounded-xl px-3 py-2 text-xs font-bold outline-none ${focusClass} ${selectClass}`}>
-        {RANKING_PERIODS.map((item) => <option key={item} value={item}>{PERIOD_LABELS[item]}</option>)}
-      </select>
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Metric Segmented */}
+      <div className={`inline-flex p-1 rounded-xl border ${dark ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-100 border-neutral-200'}`}>
+        {metricOptions.map((opt) => {
+          const isActive = metric === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onMetric(opt.value)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                isActive
+                  ? 'bg-[#FFD500] text-black shadow-xs'
+                  : dark
+                  ? 'text-neutral-400 hover:text-white'
+                  : 'text-neutral-600 hover:text-black'
+              }`}
+            >
+              <span>{opt.icon}</span> {opt.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Period Segmented */}
+      <div className={`inline-flex p-1 rounded-xl border ${dark ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-100 border-neutral-200'}`}>
+        {periodOptions.map((opt) => {
+          const isActive = period === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onPeriod(opt.value)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                isActive
+                  ? 'bg-[#FFD500] text-black shadow-xs'
+                  : dark
+                  ? 'text-neutral-400 hover:text-white'
+                  : 'text-neutral-600 hover:text-black'
+              }`}
+            >
+              <span>{opt.icon}</span> {opt.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -197,6 +295,8 @@ function findSet(data: RankingsState['data'], metric: RankingMetric, period: Ran
 }
 
 type RankingSnapshotOption = { id: string; captured_at: string };
+
+let globalSnapshotsCache: RankingSnapshotOption[] | null = null;
 
 export function SnapshotCalendar({
   accessToken = null,
@@ -209,7 +309,7 @@ export function SnapshotCalendar({
   onChange: (batchId: string | null) => void;
   dark?: boolean;
 }) {
-  const [snapshots, setSnapshots] = useState<RankingSnapshotOption[]>([]);
+  const [snapshots, setSnapshots] = useState<RankingSnapshotOption[]>(() => globalSnapshotsCache || []);
 
   useEffect(() => {
     let cancelled = false;
@@ -220,7 +320,7 @@ export function SnapshotCalendar({
       .then((body) => {
         if (cancelled) return;
         const next = body.snapshots ?? [];
-        setSnapshots(next);
+        globalSnapshotsCache = next; setSnapshots(next);
       })
       .catch(() => {
         if (!cancelled) setSnapshots([]);
@@ -229,17 +329,16 @@ export function SnapshotCalendar({
   }, [accessToken]);
 
   const selectClass = dark
-    ? 'border border-neutral-700 bg-[#20232a] text-white'
-    : 'border border-gray-200 bg-white text-[#2D3139]';
+    ? 'border-neutral-800 bg-neutral-900 text-white'
+    : 'border-neutral-200 bg-white text-[#2D3139]';
 
   return (
     <div className="flex items-center gap-1.5">
-      <CalendarDays className="h-4 w-4 text-[#D4A000] shrink-0" />
       <select
         aria-label="Seleccionar fecha de snapshot"
         value={value ?? ''}
         onChange={(event) => onChange(event.target.value ? event.target.value : null)}
-        className={`rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#FFC200] transition-colors cursor-pointer ${selectClass}`}
+        className={`rounded-xl px-3 py-1.5 text-xs font-bold border outline-none focus:border-[#FFD500] transition-colors cursor-pointer ${selectClass}`}
       >
         <option value="">📅 Más reciente (Publicado)</option>
         {snapshots.map((snap) => (
@@ -252,56 +351,124 @@ export function SnapshotCalendar({
   );
 }
 
+function ShareRankingButton({
+  selected,
+  metric,
+  period,
+}: {
+  selected?: RankingSet;
+  metric: RankingMetric;
+  period: RankingPeriod;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const copySummary = () => {
+    if (!selected || selected.entries.length === 0) return;
+    const top10 = selected.entries.slice(0, 10);
+    const metricTitle = metric === 'viewers' ? '⏱️ ESPECTADORES TOP' : '💎 DIAMANTES TOP';
+    const periodTitle = period === 'last_live' ? '🔴 Último Live' : period === '7_days' ? '⚡ 7 Días' : '🏆 28 Días';
+    
+    let text = `👑 CLASIFICACIONES TEAM POLLITO 👑\n${metricTitle} · ${periodTitle}\n\n`;
+    top10.forEach((e) => {
+      const medal = e.position === 1 ? '🥇' : e.position === 2 ? '🥈' : e.position === 3 ? '🥉' : `#${e.position}`;
+      const name = e.nickname || `@${e.display_id}`;
+      const val = formatValue(e.value, metric);
+      text += `${medal} ${name}: ${val}\n`;
+    });
+    text += `\n🌐 Consulta el ranking en: https://teampollito.milumon.dev/clasificaciones`;
+
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={copySummary}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+        copied
+          ? 'bg-emerald-600 text-white'
+          : 'bg-[#FFD500] hover:bg-[#F2C800] text-black shadow-xs'
+      }`}
+    >
+      {copied ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
+      {copied ? '¡Copiado para Redes!' : 'Compartir Top'}
+    </button>
+  );
+}
+
 export function TikTokRankingLanding({ accessToken = null }: { accessToken?: string | null }) {
   const [snapshotId, setSnapshotId] = useState<string | null>(null);
   const state = useTikTokRankings(accessToken, 10, accessToken ? snapshotId : null);
   const [metric, setMetric] = useState<RankingMetric>('viewers');
-  const [period, setPeriod] = useState<RankingPeriod>('last_live');
+  const [period, setPeriod] = useState<RankingPeriod>('7_days');
   const selected = findSet(state.data, metric, period);
 
   return (
-    <section id="rankings" className="space-y-5 pt-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-[#D4A000]" />
-            <h3 className="font-display text-2xl font-bold tracking-tight text-[#2D3139]">Top 10 de TikTok LIVE</h3>
-          </div>
-          <p className="mt-1 text-sm font-semibold text-gray-500">Resumen del Snapshot de Ranking publicado; los Miembros Oficiales aparecen destacados.</p>
+    <section id="rankings" className="space-y-6 pt-8">
+      {/* Header Centrado idéntico a las secciones principales */}
+      <div className="text-center space-y-2">
+        <h3 className="font-display font-bold text-3xl tracking-tight leading-none text-[#2D3139]">
+          Top Campeones de TikTok LIVE 🏆
+        </h3>
+        <p className="font-sans text-xs text-gray-500 font-bold">
+          Los miembros más destacados en tiempo de visualización y apoyo durante los directos.
+        </p>
+        <div className="pt-1">
+          <Link
+            href={buildPublicRankingHref({ metric, period })}
+            className="inline-flex items-center gap-1 text-xs font-bold text-[#D4A000] hover:text-[#2D3139] hover:underline"
+          >
+            Ver clasificaciones completas <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
-        <Link href={buildPublicRankingHref({ metric, period })} className="inline-flex items-center gap-1 text-xs font-bold text-[#D4A000] hover:text-[#2D3139]">
-          Ver clasificaciones completas <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
       </div>
 
       {state.loading || state.error || !state.data?.batch_id ? (
         <StatusState state={state} />
       ) : (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,.06)]">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
+        <div className="rounded-3xl border border-[#E8DFC5] bg-white p-5 sm:p-8 shadow-[0_8px_24px_rgba(76,59,18,0.06)] space-y-6">
+          {/* Controls Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8DFC5] pb-4">
             <div>
-              <p className="font-display text-xs font-bold uppercase text-[#2D3139]">{METRIC_LABELS[metric]} · {PERIOD_LABELS[period]}</p>
-              <p className="mt-1 text-[10px] text-gray-400">Actualizado {formatDate(state.data.captured_at)} · Ventana: {formatWindow(selected)}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#9A8D70]">
+                {METRIC_LABELS[metric]} · {PERIOD_LABELS[period]}
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Ventana: {formatWindow(selected)}
+              </p>
             </div>
+
             <div className="flex flex-wrap items-center gap-2">
               <SnapshotCalendar accessToken={accessToken} value={snapshotId} onChange={setSnapshotId} />
               <RankingControls metric={metric} period={period} onMetric={setMetric} onPeriod={setPeriod} />
+              <ShareRankingButton selected={selected} metric={metric} period={period} />
             </div>
           </div>
-          {!selected || selected.entries.length === 0
-            ? <EmptyState title="Sin actividad para este período" detail="TikTok no devolvió participantes para esta combinación." />
-            : (
-              <>
-                {selected.entries.length >= 3 && (
-                  <TopThreePodium viewers={selected.entries.slice(0, 3)} metric={metric} />
-                )}
+
+          {!selected || selected.entries.length === 0 ? (
+            <EmptyState title="Sin actividad para este período" detail="TikTok no devolvió participantes para esta combinación." />
+          ) : (
+            <>
+              {/* Podio Top 3 */}
+              {selected.entries.length >= 3 && (
+                <TopThreePodium viewers={selected.entries.slice(0, 3)} metric={metric} />
+              )}
+
+              {/* Filas 4 al 10 */}
+              <div className="pt-2">
+                <h4 className="font-display font-black text-sm text-[#2D3139] mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                  <Flame className="w-4 h-4 text-[#D4A000]" /> Tabla de Clasificación
+                </h4>
                 <RankingRows
                   entries={selected.entries.length >= 3 ? selected.entries.slice(3) : selected.entries}
                   limit={7}
                   metric={metric}
                 />
-              </>
-            )}
+              </div>
+            </>
+          )}
         </div>
       )}
     </section>
@@ -311,7 +478,7 @@ export function TikTokRankingLanding({ accessToken = null }: { accessToken?: str
 export function TikTokRankingConsole({ accessToken }: { accessToken: string }) {
   const state = useTikTokRankings(accessToken);
   const [metric, setMetric] = useState<RankingMetric>('viewers');
-  const [period, setPeriod] = useState<RankingPeriod>('last_live');
+  const [period, setPeriod] = useState<RankingPeriod>('7_days');
   const selected = findSet(state.data, metric, period);
   const me = selected?.me ?? null;
   const meIsVisible = me ? selected?.entries.some((entry) => entry.position === me.position && entry.display_id === me.display_id) : false;
@@ -336,9 +503,9 @@ export function TikTokRankingConsole({ accessToken }: { accessToken: string }) {
           <EmptyState title="Combinación no disponible" detail="El snapshot actual no contiene este período." />
         ) : (
           <>
-            <div className="mb-4 flex flex-wrap items-center gap-3 text-[10px] font-semibold text-gray-500">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-[10px] font-semibold text-gray-500">
               <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> Capturado {formatDate(state.data.captured_at)}</span>
-              <span>Ventana {formatWindow(selected)}</span>
+              <span>Ventana: {formatWindow(selected)}</span>
             </div>
             {selected.entries.length === 0
               ? <EmptyState title="Sin actividad" detail="No hay actividad en esta combinación." />
@@ -376,6 +543,22 @@ export function TikTokRankingPublicPage() {
   });
   const selected = findSet(state.data, metric, period);
 
+  const [session, setSession] = useState<Session | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active) setSession(data.session);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+    return () => { active = false; data.subscription.unsubscribe(); };
+  }, []);
+
+  const logout = async () => { await supabase.auth.signOut(); };
+
   const navigateToFilters = (nextMetric: RankingMetric, nextPeriod: RankingPeriod) => {
     if (nextMetric === metric && nextPeriod === period) return;
 
@@ -385,28 +568,53 @@ export function TikTokRankingPublicPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FAFAFA] px-4 py-10 font-sans text-black sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="space-y-2">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="font-display text-3xl font-bold tracking-tight text-[#2D3139]">Clasificaciones de TikTok LIVE</h1>
-              <p className="mt-2 text-sm text-gray-500">Consulta las clasificaciones completas por fecha, métrica y período.</p>
-            </div>
-            <Link href="/" className="inline-flex items-center gap-1 rounded-xl bg-[#FFD500] px-4 py-2 text-xs font-bold text-[#2D3139] transition hover:bg-[#FFC200]">
-              Volver a la comunidad <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+    <div className="min-h-screen bg-[#FDFBF7] text-[#2D3139] selection:bg-[#FFB000] selection:text-black">
+      <Header
+        session={session}
+        onLogout={logout}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+        onLogin={() => window.location.assign('/acceso?returnTo=/clasificaciones')}
+      />
+      <NavBar
+        variant="drawer"
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        session={session}
+        onLogout={logout}
+        onLogin={() => window.location.assign('/acceso?returnTo=/clasificaciones')}
+      />
+
+      <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">
+        {/* Header Title */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-2 font-display text-xs font-bold uppercase tracking-[0.25em] text-[#D4A000]">
+              TikTok LIVE · Team Pollito
+            </p>
+            <h1 className="font-display text-4xl sm:text-5xl font-black uppercase tracking-tight text-[#2D3139]">
+              Clasificaciones <span className="text-[#D4A000]">Oficiales</span>
+            </h1>
+            <p className="mt-2 text-sm font-semibold text-[#64748B]">
+              Padrón oficial de espectadores, tiempo de visualización y apoyo durante los directos de Milumon.
+            </p>
           </div>
+
+
         </div>
 
-        <section className="rounded-2xl bg-white p-5 shadow-[0_2px_16px_rgba(0,0,0,.06)]">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
+        <section className="rounded-3xl border-2 border-[#E8DFC5] bg-white p-5 sm:p-8 shadow-[0_8px_30px_rgba(76,59,18,0.06)] space-y-6">
+          {/* Controls Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8DFC5] pb-4">
             <div>
-              <p className="font-display text-xs font-bold uppercase text-[#2D3139]">{METRIC_LABELS[metric]} · {PERIOD_LABELS[period]}</p>
-              <p className="mt-1 text-[10px] text-gray-400">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#9A8D70]">
+                {METRIC_LABELS[metric]} · {PERIOD_LABELS[period]}
+              </p>
+              <p className="mt-0.5 text-[11px] text-gray-400">
                 Capturado {formatDate(state.data?.captured_at)} · Ventana: {formatWindow(selected)}
               </p>
             </div>
+
             <div className="flex flex-wrap items-center gap-2">
               <SnapshotCalendar value={snapshotId} onChange={setSnapshotId} />
               <RankingControls
@@ -415,6 +623,7 @@ export function TikTokRankingPublicPage() {
                 onMetric={(nextMetric) => navigateToFilters(nextMetric, period)}
                 onPeriod={(nextPeriod) => navigateToFilters(metric, nextPeriod)}
               />
+              <ShareRankingButton selected={selected} metric={metric} period={period} />
             </div>
           </div>
 
@@ -423,10 +632,26 @@ export function TikTokRankingPublicPage() {
           ) : !selected || selected.entries.length === 0 ? (
             <EmptyState title="Sin actividad en este período" detail="TikTok no devolvió participantes para esta combinación." />
           ) : (
-            <RankingRows entries={selected.entries} metric={metric} />
+            <>
+              {/* Podio 3D Top 3 */}
+              {selected.entries.length >= 3 && (
+                <TopThreePodium viewers={selected.entries.slice(0, 3)} metric={metric} />
+              )}
+
+              {/* Tabla de Clasificación */}
+              <div className="pt-2 space-y-3">
+                <h3 className="font-display font-black text-sm text-[#2D3139] uppercase tracking-wider flex items-center gap-1.5">
+                  <Flame className="w-4 h-4 text-[#D4A000]" /> Tabla de Clasificación Completa
+                </h3>
+                <RankingRows
+                  entries={selected.entries.length >= 3 ? selected.entries.slice(3) : selected.entries}
+                  metric={metric}
+                />
+              </div>
+            </>
           )}
         </section>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

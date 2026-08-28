@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { TikTokRankingLanding } from '@/components/tiktok-rankings/RankingViews';
 import { LiveBanner } from '@/components/landing/LiveBanner';
-import { TopFansPodium } from '@/components/landing/TopFansPodium';
+
 import { PwaInstallWidget, requestPwaInstall } from '@/components/PwaInstallWidget';
 
 import { supabase } from '@/lib/supabaseClient';
@@ -773,7 +773,7 @@ export default function ComunidadPage() {
           </section>
 
           {/* PODIO DE POLLITOS DESTACADOS */}
-          <div className="order-2"><TopFansPodium /></div>
+          <div className="order-2"></div>
 
           {/* JUEGA CON NOSOTROS */}
           <section className="order-3 space-y-6">

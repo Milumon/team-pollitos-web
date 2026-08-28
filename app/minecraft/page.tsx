@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Session } from '@supabase/supabase-js';
-import { Copy, Check, MapPin, Sparkles, ShieldCheck, Crown } from 'lucide-react';
+import { Copy, Check, MapPin, Sparkles, ShieldCheck, Crown, Trophy, Server, Compass, BookOpen, ArrowRight } from 'lucide-react';
 
 import { Header } from '@/components/ui/Header';
 import { NavBar } from '@/components/ui/NavBar';
@@ -58,84 +58,61 @@ type UserProfile = {
 };
 
 const RANK_LABELS: Record<string, { label: string; perks: string; color: string }> = {
-  pollito_invitado: {
-    label: '🐥 Pollito Invitado',
-    perks: 'Acceso básico al mundo · 1 /sethome',
-    color: 'text-neutral-700 bg-neutral-100 border-neutral-300',
-  },
-  pollito_oficial: {
-    label: '👑 Pollito Oficial',
-    perks: '3 /sethome · Prefijo dorado [Pollito] · Protecciones prioritarias',
-    color: 'text-yellow-800 bg-yellow-100 border-yellow-300',
-  },
-  pollito_admin: {
-    label: '⭐ Pollito Admin',
-    perks: 'Permisos de moderación · Teletransporte ilimitado · /fly',
-    color: 'text-red-800 bg-red-100 border-red-300',
-  },
+  pollito_admin: { label: 'Pollito Admin 👑', perks: 'Acceso total y moderación', color: 'text-amber-400 bg-amber-400/10 border-amber-400/30' },
+  pollito_mod: { label: 'Pollito Mod 🛡️', perks: 'Herramientas de moderación', color: 'text-blue-400 bg-blue-400/10 border-blue-400/30' },
+  pollito_vip: { label: 'Pollito VIP 💎', perks: 'Comandos cosméticos y parcelas extra', color: 'text-purple-400 bg-purple-400/10 border-purple-400/30' },
+  pollito_oficial: { label: 'Pollito Oficial 🐣', perks: 'Acceso survival y parcelas', color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' },
+  pollito_invitado: { label: 'Pollito Invitado 🎮', perks: 'Acceso de prueba temporal', color: 'text-gray-400 bg-gray-400/10 border-gray-400/30' },
 };
 
-function formatHeartbeat(value?: string | null) {
-  if (!value) return 'Sin datos todavía';
-  return `Actualizado ${new Intl.DateTimeFormat('es-PE', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(value))}`;
-}
+type MinecraftTab = 'server' | 'tops' | 'locations' | 'guides';
 
 export default function MinecraftPage() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [status, setStatus] = useState<MinecraftStatus | null>(null);
   const [accounts, setAccounts] = useState<MinecraftAccount[]>([]);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [locations, setLocations] = useState<MinecraftLocation[]>([]);
   const [copiedLocation, setCopiedLocation] = useState<string | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [error, setError] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
   const [isGuidesModalOpen, setIsGuidesModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<MinecraftTab>('server');
 
   useEffect(() => {
-    let active = true;
-    const loadStatus = async () => {
-      try {
-        const response = await fetch('/api/minecraft/status', { cache: 'no-store' });
-        if (!response.ok) throw new Error('status');
-        if (active) {
-          setStatus(await response.json() as MinecraftStatus);
-          setError(false);
-        }
-      } catch {
-        if (active) setError(true);
-      }
-    };
-    void loadStatus();
-    const interval = window.setInterval(loadStatus, 30_000);
-    return () => { active = false; window.clearInterval(interval); };
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     let active = true;
-    const loadLocations = async () => {
-      try {
-        const res = await fetch('/api/minecraft/locations', { cache: 'no-store' });
-        if (res.ok && active) {
-          const data = await res.json();
-          setLocations(data.locations || []);
+
+    fetch('/api/minecraft/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (active) setStatus(data as MinecraftStatus);
+      })
+      .catch(() => {
+        if (active) setStatus({ status: 'unknown', stale: true });
+      });
+
+    fetch('/api/minecraft/locations')
+      .then((res) => res.json())
+      .then((data: { locations?: MinecraftLocation[] }) => {
+        if (active && Array.isArray(data.locations)) {
+          setLocations(data.locations);
         }
-      } catch {
-        // Fallback default locations
-      }
-    };
-    void loadLocations();
+      })
+      .catch(() => {});
+
     return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    const loadSession = async () => {
-      const result = await supabase.auth.getSession();
-      if (active) setSession(result.data.session);
-    };
-    void loadSession();
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
-    return () => { active = false; data.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -144,9 +121,10 @@ export default function MinecraftPage() {
       setProfile(null);
       return;
     }
+
     let active = true;
 
-    void fetch('/api/minecraft/link', { cache: 'no-store' }).then(async (response) => {
+    fetch('/api/minecraft/link').then(async (response) => {
       if (!response.ok) return;
       const payload = await response.json() as { accounts?: MinecraftAccount[] };
       if (active) setAccounts(payload.accounts ?? []);
@@ -171,13 +149,19 @@ export default function MinecraftPage() {
     setTimeout(() => setCopiedLocation(null), 2500);
   };
 
+  const copyCommandText = (cmd: string) => {
+    navigator.clipboard.writeText(cmd);
+    setCopiedCommand(cmd);
+    setTimeout(() => setCopiedCommand(null), 2000);
+  };
+
   const online = status?.status === 'online' && !status.stale;
   const players = status?.players ?? [];
   const ready = (['java', 'bedrock'] as const).some((edition) =>
     accounts.some((account) => account.edition === edition && account.status === 'approved')
   );
-  const playHref = !session ? '/acceso?returnTo=/minecraft' : ready ? '/minecraft/link' : '/minecraft/link';
-  const playLabel = ready ? 'Mi cuenta vinculada' : 'Configurar Minecraft';
+  const playHref = !session ? '/acceso?returnTo=/minecraft' : '/minecraft/link';
+  const playLabel = 'Configurar Cuenta';
 
   const userRankInfo = profile?.minecraft_rank
     ? RANK_LABELS[profile.minecraft_rank] || RANK_LABELS.pollito_invitado
@@ -203,224 +187,328 @@ export default function MinecraftPage() {
         onLogin={() => window.location.assign('/acceso?returnTo=/minecraft')}
       />
 
-      <main className="mx-auto max-w-6xl space-y-12 px-4 py-10 sm:px-8 sm:py-16">
-        {/* Hero Section */}
-        <section className="grid items-center gap-8 md:grid-cols-[1.15fr_.85fr]">
+      <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-8 sm:py-12">
+        {/* Compact Hero Banner */}
+        <section className="grid items-center gap-6 md:grid-cols-[1.2fr_.8fr] rounded-3xl border border-[#E8DFC5] bg-white p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,.04)]">
           <div>
-            <p className="mb-3 font-display text-sm font-bold uppercase tracking-[0.3em] text-[#D4A000]">
+            <p className="mb-2 font-display text-xs font-bold uppercase tracking-[0.25em] text-[#D4A000]">
               Minecraft · Servidor Team Pollito
             </p>
-            <h1 className="font-display text-5xl font-black uppercase leading-[.9] tracking-tight text-[#2D3139] sm:text-7xl">
-              Únete al<br /><span className="text-[#D4A000]">servidor</span>
+            <h1 className="font-display text-4xl sm:text-5xl font-black uppercase tracking-tight text-[#2D3139] leading-[1]">
+              Mundo <span className="text-[#D4A000]">Survival</span>
             </h1>
-            <p className="mt-5 max-w-xl text-base font-semibold leading-relaxed text-[#64748B] sm:text-lg">
-              Un mundo compartido para jugar con la comunidad en Java y Bedrock. Vincula tu cuenta, espera la aprobación y entra a construir.
+            <p className="mt-3 max-w-lg text-sm font-semibold leading-relaxed text-[#64748B]">
+              Construye, explora y compite en nuestro mundo compartido para Java y Bedrock.
             </p>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
+
+            <div className="mt-5 flex flex-wrap items-center gap-2.5">
               <Link
                 href={playHref}
-                className="inline-flex items-center justify-center rounded-xl bg-[#FFD500] px-6 py-4 font-black text-black shadow-[4px_4px_0_#D4A000] transition hover:-translate-y-0.5 cursor-pointer"
+                className="inline-flex items-center justify-center rounded-xl bg-[#FFD500] px-5 py-2.5 text-xs font-black text-black shadow-[3px_3px_0_#D4A000] transition hover:-translate-y-0.5 cursor-pointer"
               >
                 🎮 {playLabel}
               </Link>
               <button
                 type="button"
                 onClick={() => setIsGuidesModalOpen(true)}
-                className="inline-flex items-center justify-center rounded-xl border-2 border-[#E8DFC5] bg-white px-5 py-3 font-black text-[#64748B] transition hover:border-[#FFD500] hover:text-[#2D3139] cursor-pointer"
+                className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-[#FDFBF7] px-4 py-2.5 text-xs font-bold text-[#64748B] hover:border-[#FFD500] hover:text-black transition cursor-pointer"
               >
-                📖 Ver guías rápidas
+                📖 Guía de Protección y Roles
               </button>
-              <a
-                href="#coordenadas"
-                className="inline-flex items-center justify-center rounded-xl border-2 border-[#E8DFC5] bg-white px-5 py-3 font-black text-[#64748B] transition hover:border-[#FFD500] hover:text-[#2D3139] cursor-pointer"
-              >
-                📍 Lugares de Interés
-              </a>
             </div>
           </div>
-          <div className="relative mx-auto rounded-[2.5rem] bg-[#FFF7DC] p-5 shadow-[10px_10px_0_#FFDFA0]">
-            <Image
-              src="/images/hero-chick.png"
-              alt="Pollito explorador"
-              width={288}
-              height={288}
-              className="h-56 w-56 object-contain sm:h-72 sm:w-72"
-            />
-            <span className="absolute -bottom-4 -right-4 text-5xl">⛏️</span>
+
+          <div className="flex items-center justify-center md:justify-end">
+            <div className="relative rounded-3xl bg-[#FFF7DC] p-4 shadow-sm border border-[#FFDFA0]">
+              <Image
+                src="/images/hero-chick.png"
+                alt="Pollito explorador"
+                width={160}
+                height={160}
+                className="h-32 w-32 object-contain sm:h-40 sm:w-40"
+              />
+              <span className="absolute -bottom-2 -right-2 text-3xl">⛏️</span>
+            </div>
           </div>
         </section>
 
-        {/* ─── Tarjeta de Estado Personalizada (Si está logueado) ─── */}
-        {session && (
-          <section className="rounded-3xl border-2 border-[#FFD500] bg-[#FFFBEA] p-6 shadow-[6px_6px_0_#FFD500] sm:p-8">
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#F0DC9B] pb-4">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-[#B58B00]">Tu Estado en el Servidor</span>
-                <h2 className="text-2xl font-black text-[#2D3139] flex items-center gap-2 mt-1">
-                  Hola, {profile?.roblox_display_name || 'Pollito'} 👋
-                </h2>
-              </div>
+        {/* ─── Pestañas de Navegación del Hub de Minecraft ─── */}
+        <div className="flex items-center justify-center">
+          <div className="inline-flex p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl border-2 border-[#E8DFC5] bg-white shadow-[0_4px_16px_rgba(76,59,18,0.06)] flex-wrap items-center justify-center gap-1 sm:gap-2">
+            {[
+              { id: 'server' as const, label: 'Estado & Jugadores', icon: Server },
+              { id: 'tops' as const, label: 'Tops & Récords', icon: Trophy },
+              { id: 'locations' as const, label: 'Coordenadas', icon: Compass },
+              { id: 'guides' as const, label: 'Comandos & Guías', icon: BookOpen },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-2xl font-display text-xs sm:text-sm font-black transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-[#FFD500] text-black shadow-[3px_3px_0_#D4A000] -translate-y-0.5'
+                      : 'text-[#64748B] hover:text-[#2D3139] hover:bg-[#FDFBF7]'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-              <div className={`px-3 py-1.5 rounded-full border text-xs font-bold flex items-center gap-1.5 ${userRankInfo.color}`}>
-                <Crown className="w-3.5 h-3.5" /> {userRankInfo.label}
-              </div>
+        {/* ─── TAB 1: ESTADO EN VIVO DEL SERVIDOR & JUGADORES (2 COLUMNAS) ─── */}
+        {activeTab === 'server' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Centered Header */}
+            <div className="text-center space-y-2">
+              <h2 className="font-display font-bold text-3xl sm:text-4xl tracking-tight text-[#2D3139] flex items-center justify-center gap-2">
+                🎮 Estado del Servidor & Jugadores
+              </h2>
+              <p className="font-sans text-xs sm:text-sm text-gray-500 font-bold max-w-xl mx-auto">
+                Consulta los datos de conexión, estado en vivo y miembros activos en el mundo compartido
+              </p>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Linked Accounts */}
-              <div className="bg-white p-4 rounded-2xl border border-[#E8DFC5] space-y-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#9A8D70]">Cuentas Vinculadas</span>
-                {accounts.length === 0 ? (
-                  <div className="text-sm text-neutral-600">
-                    No tienes cuenta vinculada aún.{' '}
-                    <Link href="/minecraft/link" className="font-bold text-[#D4A000] underline">
-                      Vincular ahora
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    {accounts.map((acc) => (
-                      <div key={acc.edition} className="flex items-center justify-between text-sm">
-                        <span className="font-bold text-[#2D3139]">
-                          {acc.edition === 'java' ? '☕ Java' : '📱 Bedrock'}: <code className="text-[#8B6B00]">@{acc.username}</code>
-                        </span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                          acc.status === 'approved'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : acc.status === 'pending'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {acc.status === 'approved' ? '🟢 Aprobada' : acc.status === 'pending' ? '🟡 Pendiente' : '🔴 No activa'}
+            {/* 2-Column Grid Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              {/* Columna Izquierda: Conexión + Tu Estado en el Servidor */}
+              <div className="space-y-4">
+                <MinecraftInGameCard />
+
+                {session && (
+                  <div className="bg-[#141517] border-2 border-neutral-700/90 rounded-2xl p-5 shadow-2xl space-y-3.5 text-white font-sans">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-800 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-display font-bold text-xs uppercase tracking-wider text-gray-300">
+                          Tu Cuenta en el Servidor
                         </span>
                       </div>
-                    ))}
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black border ${userRankInfo.color}`}>
+                        <Crown className="w-3 h-3" /> {userRankInfo.label}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="font-display font-bold text-lg text-white">
+                          {profile?.roblox_display_name || 'Pollito'}
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {userRankInfo.perks}
+                        </p>
+                      </div>
+
+                      <Link
+                        href="/minecraft/link"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FFD500] text-black text-xs font-black shadow-xs hover:bg-[#F2C800] transition cursor-pointer shrink-0"
+                      >
+                        ⚙️ Cuentas <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Server Rank Perks */}
-              <div className="bg-white p-4 rounded-2xl border border-[#E8DFC5] space-y-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#9A8D70]">Beneficios Activos</span>
-                <p className="text-sm text-[#2D3139] font-medium leading-relaxed">
-                  ✨ {userRankInfo.perks}
-                </p>
-                <div className="text-xs text-[#9A8D70] pt-1">
-                  💡 Protege tus cofres y casas con pala de oro (<code>/claimslist</code>).
+              {/* Columna Derecha: Lista de Jugadores Conectados en Tiempo Real */}
+              <div className="bg-white rounded-2xl border-2 border-[#E8DFC5] p-5 sm:p-6 shadow-sm space-y-4 min-h-[300px]">
+                <div className="flex items-center justify-between border-b border-[#E8DFC5] pb-3">
+                  <div>
+                    <h3 className="font-display font-black text-base text-[#2D3139] flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />
+                      Jugadores Conectados ({players.length} / {status?.maxPlayers || 20})
+                    </h3>
+                    <p className="text-[11px] text-gray-500 font-semibold mt-0.5">
+                      {online ? 'Servidor activo · Sincronizado en tiempo real' : 'Servidor en espera'}
+                    </p>
+                  </div>
+
+                  <span className="text-xs font-mono font-bold text-gray-400 bg-[#FDFBF7] px-2.5 py-1 rounded-lg border border-gray-200">
+                    TPS: {status?.tps ? status.tps.toFixed(1) : '20.0'}
+                  </span>
+                </div>
+
+                {players.length === 0 ? (
+                  <div className="py-12 text-center bg-[#FDFBF7] rounded-2xl border border-dashed border-gray-200 p-6">
+                    <p className="text-xs font-bold text-[#64748B]">No hay jugadores conectados en este momento.</p>
+                    <p className="text-[11px] text-gray-400 mt-1">¡Sé el primero en entrar a construir!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {players.map((p, idx) => (
+                      <PlayerCard key={idx} player={p} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB 2: TOPS & RÉCORDS (2 COLUMNAS) ─── */}
+        {activeTab === 'tops' && (
+          <div className="animate-fadeIn">
+            <MinecraftTopsSection />
+          </div>
+        )}
+
+        {/* ─── TAB 3: COORDENADAS & PUNTOS CLAVE (DARK GAMER HUD THEME) ─── */}
+        {activeTab === 'locations' && (
+          <section id="coordenadas" className="space-y-6 animate-fadeIn">
+            {/* Centered Header */}
+            <div className="text-center space-y-2">
+              <h2 className="font-display font-bold text-3xl sm:text-4xl tracking-tight text-[#2D3139] flex items-center justify-center gap-2">
+                📍 Coordenadas & Monumentos Oficiales
+              </h2>
+              <p className="font-sans text-xs sm:text-sm text-gray-500 font-bold max-w-xl mx-auto">
+                Puntos de interés públicos del servidor para orientarte y explorar en grupo
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {locations.map((loc) => {
+                const isCopied = copiedLocation === loc.id;
+                return (
+                  <div
+                    key={loc.id}
+                    className="bg-[#141517] rounded-3xl border-2 border-neutral-800 p-5 sm:p-6 shadow-2xl flex flex-col justify-between space-y-5 hover:border-neutral-700 transition text-white"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-3xl drop-shadow-md">{loc.emoji}</span>
+                        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border tracking-wide ${
+                          loc.dimension === 'nether'
+                            ? 'bg-red-500/15 text-red-400 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.15)]'
+                            : loc.dimension === 'end'
+                            ? 'bg-purple-500/15 text-purple-400 border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.15)]'
+                            : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]'
+                        }`}>
+                          {loc.dimension === 'overworld' ? '🌍 Overworld' : loc.dimension === 'nether' ? '🌋 Nether' : '🐉 The End'}
+                        </span>
+                      </div>
+                      <h3 className="font-display font-black text-lg text-white">{loc.name}</h3>
+                      <p className="text-xs text-gray-400 leading-relaxed font-medium">{loc.description}</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono">
+                        Coordenadas
+                      </label>
+                      <div className="flex items-center justify-between gap-2 bg-[#0d0e10] border border-neutral-800 rounded-xl p-1.5 pl-3">
+                        <code className="text-xs font-mono font-black text-[#FFD500] tracking-wide">
+                          X: {loc.x} · Y: {loc.y || 64} · Z: {loc.z}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => copyCoordinates(loc)}
+                          className={
+                            isCopied
+                              ? 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer shrink-0 bg-emerald-600 text-white shadow-xs'
+                              : 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer shrink-0 bg-[#FFD500] hover:bg-[#F2C800] text-black shadow-xs'
+                          }
+                        >
+                          {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          {isCopied ? '¡Copiado!' : 'Copiar'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded-3xl border-2 border-dashed border-neutral-800 bg-[#141517] p-5 sm:p-6 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-white">
+              <div className="flex items-center gap-3.5">
+                <span className="text-3xl">🏘️</span>
+                <div>
+                  <h4 className="font-display font-black text-sm text-white">¿Tienes un pueblo, tienda o base comunitaria?</h4>
+                  <p className="text-xs text-gray-400 mt-0.5">Pide a un Administrador registrar tus coordenadas para que figure en el mapa oficial del Team Pollito.</p>
                 </div>
               </div>
             </div>
           </section>
         )}
 
-        {/* Server Connection Data (Pixel/In-Game Style) & Live Status */}
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_.9fr] items-start">
-          {/* In-Game Connection Card */}
-          <div className="space-y-3">
-            <MinecraftInGameCard />
-          </div>
-
-          {/* Live Status & Connected Players */}
-          <div className="rounded-3xl border border-[#E8DFC5] bg-white p-6 shadow-[0_8px_24px_rgba(76,59,18,.07)] sm:p-8 space-y-5">
-            <div className="flex items-center justify-between border-b border-[#E8DFC5] pb-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-[#9A8D70]">Estado en Tiempo Real</p>
-                <p className={`mt-1 text-2xl font-black ${online ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {online ? '🟢 Servidor Online' : '🔴 Sin conexión'}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-bold text-[#9A8D70] uppercase">Conectados</span>
-                <p className="text-2xl font-mono font-black text-[#D4A000]">
-                  {status?.playerCount ?? 0} / {status?.maxPlayers ?? 20}
-                </p>
-              </div>
-            </div>
-
-            {/* Online Players List */}
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#9A8D70] mb-3">Jugadores en el servidor</p>
-              {players.length > 0 ? (
-                <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
-                  {players.map((player) => (
-                    <PlayerCard
-                      key={`${player.java ?? ''}:${player.bedrock ?? ''}`}
-                      player={player}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 bg-[#FFFDF5] border border-dashed border-[#E8DFC5] rounded-2xl text-center">
-                  <p className="text-xs font-semibold text-[#64748B]">No hay jugadores conectados en este momento.</p>
-                  <p className="text-[11px] text-[#9A8D70] mt-0.5">¡Sé el primero en entrar!</p>
-                </div>
-              )}
-            </div>
-
-            <p className="text-[10px] text-[#9A8D70] pt-2 border-t border-[#E8DFC5]">
-              {error ? 'No se pudo consultar el estado.' : formatHeartbeat(status?.lastHeartbeatAt)}
-            </p>
-          </div>
-        </section>
-
-        {/* ─── Guía Visual de Coordenadas & Zonas del Mundo ─── */}
-        <section id="coordenadas" className="scroll-mt-24 rounded-3xl border-2 border-[#D8EACD] bg-[#F7FCF4] p-6 sm:p-8 space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#4F8A3D] flex items-center gap-1.5">
-                <MapPin className="w-4 h-4" /> Mapa del Servidor
-              </p>
-              <h2 className="mt-1 font-display text-3xl font-bold text-[#2D3139]">Lugares de Interés & Coordenadas</h2>
-              <p className="text-sm text-[#64748B] mt-1">
-                Haz clic en <strong>Copiar</strong> para guardar las coordenadas en tu portapapeles y viajar en el juego.
+        {/* ─── TAB 4: GUÍAS & COMANDOS (DARK GAMER HUD CON BOTÓN DE COPIAR) ─── */}
+        {activeTab === 'guides' && (
+          <section className="space-y-6 animate-fadeIn">
+            <div className="text-center space-y-2">
+              <h2 className="font-display font-bold text-3xl sm:text-4xl tracking-tight text-[#2D3139] flex items-center justify-center gap-2">
+                📖 Comandos & Guía de Supervivencia
+              </h2>
+              <p className="font-sans text-xs sm:text-sm text-gray-500 font-bold max-w-xl mx-auto">
+                Haz clic en cualquier comando para copiarlo a tu portapapeles y pegarlo en el chat del juego
               </p>
             </div>
-            <span className="text-3xl">🧭</span>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {locations.map((loc) => {
-              const isCopied = copiedLocation === loc.id;
-              return (
-                <div
-                  key={loc.id}
-                  className="bg-white rounded-2xl border border-[#D8EACD] p-5 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition"
-                >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl">{loc.emoji}</span>
-                      <span className="text-[0.7em] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {loc.dimension === 'overworld' ? 'Overworld' : loc.dimension}
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-lg text-[#2D3139]">{loc.name}</h3>
-                    <p className="text-xs text-[#64748B] leading-relaxed">{loc.description}</p>
-                  </div>
+            <div className="rounded-3xl border-2 border-neutral-800 bg-[#141517] p-6 sm:p-8 shadow-2xl space-y-6 text-white">
+              <div className="border-b border-neutral-800 pb-4 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2">
+                    📜 Comandos Esenciales de Supervivencia
+                  </h3>
+                  <p className="text-xs text-gray-400 font-medium mt-1">
+                    Usa estos comandos en el chat (<kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-[#FFD500] font-mono text-[10px]">T</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-neutral-800 text-[#FFD500] font-mono text-[10px]">Ctrl+V</kbd>) para moverte y proteger tus construcciones.
+                  </p>
+                </div>
+              </div>
 
-                  <div className="pt-2 border-t border-neutral-100 flex items-center justify-between">
-                    <code className="text-xs font-mono font-bold text-[#8B6B00]">
-                      X: {loc.x}, Z: {loc.z}
-                    </code>
-                    <button
-                      onClick={() => copyCoordinates(loc)}
-                      className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                        isCopied
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-[#FFD500] hover:bg-[#F2C800] text-black shadow-xs'
-                      }`}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { cmd: '/spawn', label: 'Spawn Seguro', desc: 'Regresa al punto inicial seguro y protegido del servidor.' },
+                  { cmd: '/sethome casa', label: 'Guardar Casa', desc: 'Guarda la ubicación exacta de tu casa o base actual.' },
+                  { cmd: '/home casa', label: 'Volver a Casa', desc: 'Teletranspórtate a tu casa guardada al instante.' },
+                  { cmd: '/tpa ', label: 'Teletransporte', desc: 'Envía una solicitud de teletransporte a otro pollito.' },
+                  { cmd: '/tpaccept', label: 'Aceptar TPA', desc: 'Acepta la solicitud de teletransporte de un amigo.' },
+                  { cmd: '/trust ', label: 'Permisos de Terreno', desc: 'Da permisos de construcción a un amigo en tu terreno protegido.' },
+                ].map((c) => {
+                  const isCopied = copiedCommand === c.cmd;
+                  return (
+                    <div
+                      key={c.cmd}
+                      className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/90 flex flex-col justify-between space-y-3 hover:border-neutral-700 transition"
                     >
-                      {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      {isCopied ? 'Copiado' : 'Copiar'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-black text-gray-300 uppercase tracking-wider font-display">
+                            {c.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 font-medium mt-1 leading-relaxed">
+                          {c.desc}
+                        </p>
+                      </div>
 
-        {/* Community Tops & Members */}
-        <MinecraftTopsSection />
+                      <div className="flex items-center justify-between gap-2 bg-[#0d0e10] border border-neutral-800 rounded-xl p-1.5 pl-3">
+                        <code className="text-xs font-mono font-black text-[#FFD500]">
+                          {c.cmd}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => copyCommandText(c.cmd)}
+                          className={
+                            isCopied
+                              ? 'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer shrink-0 bg-emerald-600 text-white shadow-xs'
+                              : 'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer shrink-0 bg-[#FFD500] hover:bg-[#F2C800] text-black shadow-xs'
+                          }
+                        >
+                          {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {isCopied ? '¡Copiado!' : 'Copiar'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* Quick Guides Modal */}
@@ -436,8 +524,8 @@ function PlayerCard({ player }: Readonly<{ player: MinecraftPlayer }>) {
   const displayName = player.nickname || player.java || player.bedrock || 'Pollito';
   const connections = [player.java && `Java: ${player.java}`, player.bedrock && `Bedrock: ${player.bedrock}`].filter(Boolean).join(' · ');
   return (
-    <article className="flex items-center gap-3 rounded-2xl border border-[#E8DFC5] bg-[#FFFDF5] p-2.5">
-      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FFDFA0]">
+    <article className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-[#FFFDF5] p-2.5 shadow-2xs hover:border-[#FFD500] transition">
+      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#FFDFA0] border border-[#FFD500]/50">
         {player.avatarUrl ? (
           <Image src={player.avatarUrl} alt="" fill sizes="36px" unoptimized className="h-full w-full object-cover" />
         ) : (
@@ -445,8 +533,8 @@ function PlayerCard({ player }: Readonly<{ player: MinecraftPlayer }>) {
         )}
       </div>
       <div className="min-w-0">
-        <p className="truncate text-xs font-black text-[#45413A]">{displayName}</p>
-        <p className="truncate text-[10px] font-semibold text-[#9A8D70]">{connections || 'Minecraft'}</p>
+        <p className="truncate text-xs font-black text-[#2D3139]">{displayName}</p>
+        <p className="truncate text-[10px] font-semibold text-[#8B6B00]">{connections || 'Minecraft'}</p>
       </div>
     </article>
   );
