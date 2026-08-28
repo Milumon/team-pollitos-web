@@ -254,13 +254,18 @@ export default function ComunidadPage() {
         const data = await res.json();
         console.log('DEBUG: /api/interviews/my-status devolvió:', data);
         setStatusInfo(data);
+        if (data.status === 'none') {
+          window.location.assign('/unirse');
+          return;
+        }
         if (data.status === 'approved') {
           const suggestedName = data.roblox_user || 'Pollito';
           const savedName = data.roblox_display_name?.replace(/^🐣\s*|\s*🐣$/g, '').trim();
           setIdentityDisplayName(data.identity_confirmed_at ? (savedName || suggestedName) : suggestedName);
           setIdentityTiktokUser(data.tiktok_user || '');
           setIdentityMinecraftUsername(data.declared_minecraft_username || data.roblox_user || '');
-          setIdentityModalOpen(!data.identity_confirmed_at);
+          // Keep identity modal disabled on landing to avoid unexpected popups
+          setIdentityModalOpen(false);
         }
         if (data.testimonial) {
           setUserTestimonial(data.testimonial);
