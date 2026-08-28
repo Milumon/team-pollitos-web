@@ -87,19 +87,10 @@ export default function MinecraftAdminView() {
 
   const loadRequests = async () => {
     try {
-      const [requestsResponse, ranksResponse] = await Promise.all([
-        adminFetch('/api/admin/minecraft/requests'),
-        adminFetch('/api/admin/minecraft/ranks'),
-      ]);
-      
+      const requestsResponse = await adminFetch('/api/admin/minecraft/requests');
       const requestsPayload = await readApiPayload(requestsResponse);
       if (!requestsResponse.ok) throw new Error(String(requestsPayload.error || 'No se pudieron cargar las solicitudes.'));
       setRequests((requestsPayload.requests as MinecraftRequest[]) ?? []);
-
-      const ranksPayload = await readApiPayload(ranksResponse);
-      if (ranksResponse.ok) {
-        setRankUsers((ranksPayload.users as UserRankProfile[]) ?? []);
-      }
     } catch (loadError: unknown) {
       setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar las solicitudes.');
     }
