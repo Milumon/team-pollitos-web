@@ -656,7 +656,7 @@ export function ChatOverlayAdminView() {
                     : 'bg-neutral-800 text-gray-400 border-neutral-700'
                 }`}
               >
-                🖼️ Fondo: {showBackgroundGuide ? 'Juego' : 'Transparente'}
+                🖼️ Guía Stream: {showBackgroundGuide ? 'ON' : 'OFF'}
               </button>
 
               <div className="flex bg-neutral-800 p-0.5 rounded-lg border border-neutral-700">
@@ -711,7 +711,7 @@ export function ChatOverlayAdminView() {
                 <div
                   className="absolute inset-0 bg-cover bg-center"
                   style={{
-                    backgroundImage: 'url("https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=720&auto=format&fit=crop")'
+                    backgroundImage: 'url("/images/916 vertical layout.png")'
                   }}
                 >
                   <div className="absolute inset-0 bg-black/40" />
