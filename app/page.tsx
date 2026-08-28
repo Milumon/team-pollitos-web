@@ -85,12 +85,17 @@ const getMemberRole = (username: string, member?: Member) => {
   if (member?.is_admin || member?.role === 'admin' || member?.minecraft_rank === 'pollito_admin' || username.toLowerCase().includes('milumon')) {
     return 'Admin 🐣';
   }
-  return 'Pollito Oficial 🐣';
+  if (member?.minecraft_rank === 'pollito_invitado') {
+    return 'Pollito Invitado 🐣';
+  }
+  return 'Pollito Oficial 👑';
 };
 
 const getRoleColor = (role: string) => {
   switch (role) {
-    case 'Admin 🐣': return 'bg-sky-50 text-sky-700 border border-sky-200'; 
+    case 'Admin 🐣': return 'bg-sky-50 text-sky-700 border border-sky-200';
+    case 'Pollito Oficial 👑': return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+    case 'Pollito Invitado 🐣': return 'bg-amber-50 text-amber-700 border border-amber-200';
     default: return 'bg-gray-50 text-gray-600 border border-gray-200';
   }
 };
@@ -138,6 +143,7 @@ function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) 
 export default function ComunidadPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [membersTab, setMembersTab] = useState<'oficiales' | 'invitados' | 'todos'>('oficiales');
   const [slots, setSlots] = useState<Slot[]>([]);
   const [statusInfo, setStatusInfo] = useState<InterviewStatus>({ status: 'none' });
 
@@ -1245,25 +1251,55 @@ export default function ComunidadPage() {
             )}
           </section>
 
-          {/* SECCIÓN MIEMBROS OFICIALES */}
+          {/* SECCIÓN MIEMBROS DE LA COMUNIDAD (OFICIALES E INVITADOS) */}
           <section id="miembros" className="order-9 space-y-6 rounded-2xl border border-gray-200 bg-white p-6 pt-8 shadow-[0_4px_20px_rgba(0,0,0,.06)]">
-            <div className="flex justify-between items-center pb-4 border-b border-gray-100">
-              <h3 className="font-display font-bold text-xl flex items-center gap-2 text-[#2D3139]">
-                👥 Miembros Oficiales
-              </h3>
-              <button
-                onClick={() => { setComingSoon(true); setTimeout(() => setComingSoon(false), 2500); }}
-                className="px-3 py-1.5 text-sm font-sans text-gray-400 hover:text-[#2D3139] transition-colors cursor-pointer"
-              >
-                Ver todos →
-              </button>
-            </div>
-
-            {comingSoon && (
-              <div className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-2 text-xs font-semibold text-gray-500 mb-3 text-center animate-fade-in">
-                Próximamente grilla expandida con filtros.
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <h3 className="font-display font-bold text-xl flex items-center gap-2 text-[#2D3139]">
+                  👥 Miembros de la Comunidad
+                </h3>
+                <p className="text-xs text-gray-500 font-sans mt-0.5">
+                  Conoce a los integrantes oficiales e invitados del Team Pollito
+                </p>
               </div>
-            )}
+
+              {/* Tabs de Filtro */}
+              <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl font-display font-semibold text-xs self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setMembersTab('oficiales')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    membersTab === 'oficiales'
+                      ? 'bg-white text-[#2D3139] shadow-sm font-bold'
+                      : 'text-gray-500 hover:text-[#2D3139]'
+                  }`}
+                >
+                  👑 Oficiales ({members.filter(m => m.minecraft_rank !== 'pollito_invitado').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMembersTab('invitados')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    membersTab === 'invitados'
+                      ? 'bg-white text-[#2D3139] shadow-sm font-bold'
+                      : 'text-gray-500 hover:text-[#2D3139]'
+                  }`}
+                >
+                  🐣 Invitados ({members.filter(m => m.minecraft_rank === 'pollito_invitado').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMembersTab('todos')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    membersTab === 'todos'
+                      ? 'bg-white text-[#2D3139] shadow-sm font-bold'
+                      : 'text-gray-500 hover:text-[#2D3139]'
+                  }`}
+                >
+                  Todos ({members.length})
+                </button>
+              </div>
+            </div>
 
             {loadingMembers ? (
               <div className="flex justify-center items-center py-12">
@@ -1271,55 +1307,71 @@ export default function ComunidadPage() {
                   <Loader className="w-8 h-8 text-[#FFC200]" />
                 </motion.div>
               </div>
-            ) : members.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-xl">
-                <p className="font-sans text-sm text-gray-400">
-                  No hay miembros oficiales registrados aún. ¡Sé el primero!
-                </p>
-              </div>
-            ) : (
-              <div className="max-h-[360px] overflow-y-auto pr-1.5 scrollbar-thin">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-1">
-                  {sortedMembers.map((member) => {
-                    const role = getMemberRole(member.roblox_user, member);
-                    
-                    return (
-                      <motion.div
-                        key={member.roblox_user}
-                        whileHover={{ scale: 1.03, y: -2 }}
-                        className="bg-white border border-gray-200/80 p-4 rounded-2xl text-center flex flex-col items-center gap-3 shadow-[0_4px_12px_rgba(0,0,0,.06)] hover:shadow-[0_8px_20px_rgba(0,0,0,.1)] transition-all"
-                      >
-                        <div className="w-14 h-14 rounded-full border border-gray-100 bg-gray-50 overflow-hidden flex items-center justify-center">
-                          {member.roblox_avatar_url ? (
-                            <img
-                              src={member.roblox_avatar_url}
-                              alt={member.roblox_display_name}
-                              className="w-full h-full object-cover"
-                              style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }}
-                            />
-                          ) : (
-                            <span className="text-2xl">🐣</span>
-                          )}
-                        </div>
-                        
-                        <div className="w-full">
-                          <p className="font-display font-bold text-xs text-[#2D3139] leading-none truncate">
-                            {member.roblox_display_name}
-                          </p>
-                          <p className="font-sans text-[10px] text-gray-400 mt-0.5 truncate">
-                            @{member.roblox_user}
-                          </p>
-                        </div>
+            ) : (() => {
+              const currentList = sortedMembers.filter(m => {
+                if (membersTab === 'oficiales') return m.minecraft_rank !== 'pollito_invitado';
+                if (membersTab === 'invitados') return m.minecraft_rank === 'pollito_invitado';
+                return true;
+              });
 
-                        <span className={`font-sans text-[9px] tracking-wide px-2 py-0.5 rounded-full ${getRoleColor(role)}`}>
-                          {role}
-                        </span>
-                      </motion.div>
-                    );
-                  })}
+              if (currentList.length === 0) {
+                return (
+                  <div className="text-center py-12 bg-gray-50 rounded-xl">
+                    <p className="font-sans text-sm text-gray-400">
+                      {membersTab === 'oficiales'
+                        ? 'No hay miembros oficiales registrados aún.'
+                        : membersTab === 'invitados'
+                        ? 'No hay pollitos invitados registrados aún.'
+                        : 'No hay miembros registrados aún.'}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-1">
+                    {currentList.map((member) => {
+                      const role = getMemberRole(member.roblox_user, member);
+                      
+                      return (
+                        <motion.div
+                          key={member.roblox_user}
+                          whileHover={{ scale: 1.03, y: -2 }}
+                          className="bg-white border border-gray-200/80 p-4 rounded-2xl text-center flex flex-col items-center gap-3 shadow-[0_4px_12px_rgba(0,0,0,.06)] hover:shadow-[0_8px_20px_rgba(0,0,0,.1)] transition-all"
+                        >
+                          <div className="w-14 h-14 rounded-full border border-gray-100 bg-gray-50 overflow-hidden flex items-center justify-center">
+                            {member.roblox_avatar_url ? (
+                              <img
+                                src={member.roblox_avatar_url}
+                                alt={member.roblox_display_name}
+                                className="w-full h-full object-cover"
+                                style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }}
+                              />
+                            ) : (
+                              <span className="text-2xl">🐣</span>
+                            )}
+                          </div>
+                          
+                          <div className="w-full">
+                            <p className="font-display font-bold text-xs text-[#2D3139] leading-none truncate">
+                              {member.roblox_display_name}
+                            </p>
+                            <p className="font-sans text-[10px] text-gray-400 mt-0.5 truncate">
+                              @{member.roblox_user}
+                            </p>
+                          </div>
+
+                          <span className={`font-sans text-[9px] tracking-wide px-2 py-0.5 rounded-full font-semibold ${getRoleColor(role)}`}>
+                            {role}
+                          </span>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </section>
 
         </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import { FormEvent, type ReactNode, useEffect, useRef, useState } from 'react';
-
 import { Header } from '@/components/ui/Header';
 import { NavBar } from '@/components/ui/NavBar';
 
@@ -19,15 +18,10 @@ type Account = {
   link_code_expires_at?: string | null;
 };
 
-const steps = ['Tu cuenta', 'Solicita', 'Entra', 'Confirma', 'Listo'];
+const steps = ['Tu cuenta', 'Solicita', 'Conéctate', 'Confirma', 'Listo'];
 
 function isVerified(account: Account | null) {
   return Boolean(account?.verified_at && account.status === 'approved');
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return 'Hoy';
-  return new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(new Date(value));
 }
 
 export default function MinecraftLinkForm() {
@@ -42,6 +36,7 @@ export default function MinecraftLinkForm() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [ipCopied, setIpCopied] = useState(false);
   const [codeExpired, setCodeExpired] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [replaceMode, setReplaceMode] = useState(false);
@@ -97,7 +92,7 @@ export default function MinecraftLinkForm() {
       active = false;
       window.clearInterval(interval);
     };
-  }, [code, replaceMode, step]);
+  }, [code, replaceMode, step, edition]);
 
   useEffect(() => {
     if (!code || !expiresAt) return;
@@ -158,6 +153,12 @@ export default function MinecraftLinkForm() {
     window.setTimeout(() => setCopied(false), 2200);
   };
 
+  const copyIp = async () => {
+    await navigator.clipboard.writeText('mc.milumon.dev');
+    setIpCopied(true);
+    window.setTimeout(() => setIpCopied(false), 2200);
+  };
+
   const beginLink = (targetEdition: 'java' | 'bedrock', replaceExisting: boolean) => {
     const existingAccount = accounts.find((item) => item.edition === targetEdition);
     setEdition(targetEdition);
@@ -185,18 +186,74 @@ export default function MinecraftLinkForm() {
     <div className="min-h-screen bg-[#FDFBF7] text-[#2D3139] selection:bg-[#FFB000] selection:text-black">
       <Header session={null} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
       <NavBar variant="drawer" isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
-      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-8 sm:py-16">
-        <div className="mb-8 flex items-center gap-3"><span className="text-4xl">🐣</span><div><p className="font-display text-sm font-bold uppercase tracking-[0.3em] text-[#D4A000]">Minecraft · Team Pollito</p><h1 className="font-display text-4xl font-black uppercase leading-[0.92] tracking-tight text-[#2D3139] sm:text-5xl">Vincula tu cuenta</h1></div></div>
+      <main className="mx-auto max-w-2xl px-4 py-12 sm:px-8 sm:py-16">
+        <div className="mb-8 flex items-center gap-3">
+          <span className="text-4xl">🐣</span>
+          <div>
+            <p className="font-display text-sm font-bold uppercase tracking-[0.3em] text-[#D4A000]">Minecraft · Team Pollito</p>
+            <h1 className="font-display text-3xl font-black uppercase leading-[0.95] tracking-tight text-[#2D3139] sm:text-4xl">Vincula tu cuenta</h1>
+          </div>
+        </div>
 
-            {!replaceMode && account && isVerified(account) ? <SuccessCard accounts={accounts} onLink={beginLink} /> : loading ? <p className="text-[#64748B]">Cargando tu aventura...</p> : (
+        {!replaceMode && account && isVerified(account) ? (
+          <SuccessCard accounts={accounts} onLink={beginLink} />
+        ) : loading ? (
+          <p className="text-[#64748B]">Cargando tu aventura...</p>
+        ) : (
           <>
             <Progress current={step} />
             {codeExpired && <ExpiredCard saving={saving} onRegenerate={requestCode} />}
-            {replaceMode && replacingExisting && <div className="mb-6 rounded-2xl border border-amber-200 bg-[#FFF7DC] p-4 text-sm font-medium text-[#7A6330]">Estás cambiando esta cuenta. La vinculación anterior dejará de funcionar cuando completes este proceso.</div>}
-            {step === 1 && <StepOne edition={edition} setEdition={(value) => { formHasChanges.current = true; setEdition(value); }} username={username} setUsername={(value) => { formHasChanges.current = true; setUsername(value); }} onNext={() => { setMessage(null); setStep(2); }} />}
-            {step === 2 && <StepTwo edition={edition} username={username} saving={saving} onBack={() => setStep(1)} onSubmit={submit} />}
-            {step === 3 && code && <StepThree edition={edition} code={code} expiresAt={expiresAt} remainingSeconds={remainingSeconds} saving={saving} onNext={() => setStep(4)} onBack={editAccount} onRegenerate={requestCode} onCopy={copyCommand} copied={copied} />}
-            {step === 4 && code && <StepFour code={code} saving={saving} onBack={editAccount} onRegenerate={requestCode} onCopy={copyCommand} copied={copied} message={message} />}
+            {replaceMode && replacingExisting && (
+              <div className="mb-6 rounded-2xl border border-amber-200 bg-[#FFF7DC] p-4 text-sm font-medium text-[#7A6330]">
+                Estás cambiando esta cuenta. La vinculación anterior dejará de funcionar cuando completes este proceso.
+              </div>
+            )}
+            {step === 1 && (
+              <StepOne
+                edition={edition}
+                setEdition={(value) => { formHasChanges.current = true; setEdition(value); }}
+                username={username}
+                setUsername={(value) => { formHasChanges.current = true; setUsername(value); }}
+                onNext={() => { setMessage(null); setStep(2); }}
+              />
+            )}
+            {step === 2 && (
+              <StepTwo
+                edition={edition}
+                username={username}
+                saving={saving}
+                onBack={() => setStep(1)}
+                onSubmit={submit}
+              />
+            )}
+            {step === 3 && code && (
+              <StepThree
+                edition={edition}
+                username={username}
+                code={code}
+                expiresAt={expiresAt}
+                remainingSeconds={remainingSeconds}
+                saving={saving}
+                onNext={() => setStep(4)}
+                onBack={editAccount}
+                onRegenerate={requestCode}
+                onCopy={copyCommand}
+                copied={copied}
+                onCopyIp={copyIp}
+                ipCopied={ipCopied}
+              />
+            )}
+            {step === 4 && code && (
+              <StepFour
+                code={code}
+                saving={saving}
+                onBack={editAccount}
+                onRegenerate={requestCode}
+                onCopy={copyCommand}
+                copied={copied}
+                message={message}
+              />
+            )}
             {message && <p className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{message}</p>}
           </>
         )}
@@ -206,49 +263,366 @@ export default function MinecraftLinkForm() {
 }
 
 function Progress({ current }: Readonly<{ current: number }>) {
-  return <div className="mb-8"><div className="mb-3 flex justify-between text-xs font-bold text-[#9A8D70]"><span>Paso {current} de 5</span><span>{steps[current - 1]}</span></div><div className="flex gap-2">{steps.map((label, index) => <div key={label} className={`h-3 flex-1 rounded-full ${index < current ? 'bg-[#FFD500]' : 'bg-[#E8DFC5]'}`} aria-label={label} />)}</div></div>;
+  return (
+    <div className="mb-8">
+      <div className="mb-3 flex justify-between text-xs font-bold text-[#9A8D70]">
+        <span>Paso {current} de 5</span>
+        <span>{steps[current - 1]}</span>
+      </div>
+      <div className="flex gap-2">
+        {steps.map((label, index) => (
+          <div key={label} className={`h-2.5 flex-1 rounded-full ${index < current ? 'bg-[#FFD500]' : 'bg-[#E8DFC5]'}`} aria-label={label} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function StepOne({ edition, setEdition, username, setUsername, onNext }: Readonly<{ edition: 'java' | 'bedrock'; setEdition: (value: 'java' | 'bedrock') => void; username: string; setUsername: (value: string) => void; onNext: () => void }>) {
-  return <Card title="Empecemos, pollito" icon="🥚"><p className="text-sm font-medium text-[#64748B]">Escribe el nombre que usas en Minecraft. Las mayúsculas no importan.</p><label className="mt-5 block text-sm font-bold text-[#45413A]">Edición<select value={edition} onChange={(event) => setEdition(event.target.value as 'java' | 'bedrock')} className="mt-2 w-full rounded-xl border border-[#E8DFC5] bg-[#FFFDF5] px-4 py-3 text-[#2D3139]"><option value="java">Java</option><option value="bedrock">Bedrock</option></select></label><label className="mt-4 block text-sm font-bold text-[#45413A]">Username de Minecraft<input value={username} onChange={(event) => setUsername(event.target.value)} required maxLength={32} className="mt-2 w-full rounded-xl border border-[#E8DFC5] bg-[#FFFDF5] px-4 py-3 text-[#2D3139]" placeholder="Ejemplo: Pollito123" /></label><button type="button" onClick={onNext} disabled={!username.trim()} className="mt-6 w-full rounded-xl bg-[#FFD500] px-5 py-3 font-black text-black disabled:cursor-not-allowed disabled:opacity-50">Continuar ✨</button></Card>;
+  return (
+    <Card title="Datos de tu cuenta" icon="🥚">
+      <p className="text-sm font-medium text-[#64748B]">Selecciona tu plataforma e ingresa tu nombre exacto de Minecraft.</p>
+      
+      <div className="mt-5 space-y-4">
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-[#45413A] mb-2">Plataforma</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setEdition('java')}
+              className={`p-3.5 rounded-xl border-2 text-left font-display transition-all cursor-pointer ${
+                edition === 'java'
+                  ? 'border-[#FFD500] bg-[#FFF9E6] shadow-sm ring-1 ring-[#FFD500]'
+                  : 'border-gray-200 bg-white hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-lg block">☕</span>
+              <p className="font-bold text-sm text-[#2D3139] mt-1">Java Edition</p>
+              <p className="text-[11px] text-gray-500 font-sans">PC / Mac / Linux</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setEdition('bedrock')}
+              className={`p-3.5 rounded-xl border-2 text-left font-display transition-all cursor-pointer ${
+                edition === 'bedrock'
+                  ? 'border-[#FFD500] bg-[#FFF9E6] shadow-sm ring-1 ring-[#FFD500]'
+                  : 'border-gray-200 bg-white hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-lg block">📱</span>
+              <p className="font-bold text-sm text-[#2D3139] mt-1">Bedrock Edition</p>
+              <p className="text-[11px] text-gray-500 font-sans">Celular, Consolas, Win 10</p>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-[#45413A] mb-1">Tu nombre de usuario</label>
+          <input
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            required
+            maxLength={32}
+            className="w-full rounded-xl border border-[#E8DFC5] bg-[#FFFDF5] px-4 py-3 text-base font-semibold text-[#2D3139] focus:outline-none focus:ring-2 focus:ring-[#FFD500]"
+            placeholder={edition === 'bedrock' ? 'Ejemplo: TuGamertag' : 'Ejemplo: TuNickJava'}
+          />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={!username.trim()}
+        className="mt-6 w-full rounded-xl bg-[#FFD500] hover:brightness-105 px-5 py-3 font-display font-black text-black transition-all disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+      >
+        Continuar ✨
+      </button>
+    </Card>
+  );
 }
 
 function StepTwo({ edition, username, saving, onBack, onSubmit }: Readonly<{ edition: string; username: string; saving: boolean; onBack: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }>) {
-  return <Card title="Revisa tus datos" icon="🎟️"><div className="rounded-2xl bg-[#FFF7DC] p-4"><p className="text-xs font-bold uppercase text-[#9A8D70]">Tu cuenta</p><p className="mt-1 text-xl font-black text-[#2D3139]">{username}</p><p className="text-sm font-medium text-[#7A6330]">Minecraft {edition}</p></div><p className="mt-5 text-sm font-medium leading-relaxed text-[#64748B]">Al solicitar, recibirás un código para vincular tu cuenta dentro del servidor.</p><form onSubmit={onSubmit} className="mt-6 flex gap-3"><button type="button" onClick={onBack} className="rounded-xl border border-[#E8DFC5] px-4 py-3 font-bold text-[#64748B]">Atrás</button><button disabled={saving} className="flex-1 rounded-xl bg-[#FFD500] px-5 py-3 font-black text-black disabled:opacity-50">{saving ? 'Creando...' : 'Solicitar acceso'}</button></form></Card>;
+  const isJava = edition === 'java';
+  return (
+    <Card title="Confirma tu solicitud" icon="🎟️">
+      <div className="rounded-2xl bg-[#FFF9E6] border border-[#FFD500]/40 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase text-[#9A8D70]">Cuenta a vincular</p>
+            <p className="mt-1 text-xl font-black text-[#2D3139] font-mono">{username}</p>
+          </div>
+          <span className="text-xs font-display font-bold px-3 py-1 bg-white border border-[#FFD500] rounded-full text-[#7A6330]">
+            {isJava ? '☕ Java' : '📱 Bedrock'}
+          </span>
+        </div>
+      </div>
+
+      <p className="mt-4 text-sm font-medium leading-relaxed text-[#64748B]">
+        Generaremos un código único temporal para que ingreses al servidor y completes la vinculación en segundos.
+      </p>
+
+      <form onSubmit={onSubmit} className="mt-6 flex gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="rounded-xl border border-[#E8DFC5] bg-white hover:bg-gray-50 px-5 py-3 font-display font-bold text-[#64748B] cursor-pointer"
+        >
+          Atrás
+        </button>
+        <button
+          disabled={saving}
+          className="flex-1 rounded-xl bg-[#FFD500] hover:brightness-105 px-5 py-3 font-display font-black text-black transition-all disabled:opacity-50 cursor-pointer"
+        >
+          {saving ? 'Generando código...' : 'Obtener código de vinculación'}
+        </button>
+      </form>
+    </Card>
+  );
 }
 
-function ConnectionDetails({ port }: Readonly<{ port: string }>) {
-  const [copied, setCopied] = useState<string | null>(null);
-  const copy = async (value: string, label: string) => {
-    await navigator.clipboard.writeText(value);
-    setCopied(label);
-    window.setTimeout(() => setCopied(null), 2200);
-  };
-  return <div className="mt-5 grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-[#E8DFC5] bg-[#FFFDF5] p-4"><p className="text-xs font-bold uppercase tracking-widest text-[#9A8D70]">Dirección</p><p className="mt-2 font-mono text-lg font-black text-[#2D3139]">mc.milumon.dev</p><button type="button" onClick={() => copy('mc.milumon.dev', 'address')} className="mt-3 rounded-lg bg-[#FFD500] px-3 py-2 text-xs font-black text-black">{copied === 'address' ? '✅ Copiada' : 'Copiar dirección'}</button></div><div className="rounded-xl border border-[#E8DFC5] bg-[#FFFDF5] p-4"><p className="text-xs font-bold uppercase tracking-widest text-[#9A8D70]">Puerto</p><p className="mt-2 font-mono text-lg font-black text-[#2D3139]">{port}</p><button type="button" onClick={() => copy(port, 'port')} className="mt-3 rounded-lg bg-[#FFD500] px-3 py-2 text-xs font-black text-black">{copied === 'port' ? '✅ Copiado' : 'Copiar puerto'}</button></div><button type="button" onClick={() => copy(`mc.milumon.dev\n${port}`, 'both')} className="sm:col-span-2 rounded-xl border border-[#E8DFC5] px-4 py-3 text-sm font-black text-[#64748B]">{copied === 'both' ? '✅ Datos copiados' : 'Copiar dirección y puerto'}</button></div>;
-}
+function StepThree({
+  edition,
+  username,
+  code,
+  expiresAt,
+  remainingSeconds,
+  saving,
+  onNext,
+  onBack,
+  onRegenerate,
+  onCopy,
+  copied,
+  onCopyIp,
+  ipCopied,
+}: Readonly<{
+  edition: 'java' | 'bedrock';
+  username: string;
+  code: string;
+  expiresAt: string | null;
+  remainingSeconds: number | null;
+  saving: boolean;
+  onNext: () => void;
+  onBack: () => void;
+  onRegenerate: () => void;
+  onCopy: () => void;
+  copied: boolean;
+  onCopyIp: () => void;
+  ipCopied: boolean;
+}>) {
+  const isJava = edition === 'java';
+  const countdown = remainingSeconds === null ? '10 minutos' : remainingSeconds >= 60 ? `${Math.ceil(remainingSeconds / 60)} min` : `${remainingSeconds}s`;
 
-function StepThree({ edition, code, expiresAt, remainingSeconds, saving, onNext, onBack, onRegenerate, onCopy, copied }: Readonly<{ edition: 'java' | 'bedrock'; code: string; expiresAt: string | null; remainingSeconds: number | null; saving: boolean; onNext: () => void; onBack: () => void; onRegenerate: () => void; onCopy: () => void; copied: boolean }>) {
-  const port = edition === 'bedrock' ? '19132' : '25565';
-  const countdown = remainingSeconds === null ? '10 minutos' : remainingSeconds >= 60 ? `${Math.ceil(remainingSeconds / 60)} minutos` : `${remainingSeconds} segundos`;
-  return <Card title="Ahora termina la vinculación" icon="🎉"><p className="text-sm font-medium leading-relaxed text-[#64748B]">Entrar al servidor todavía no termina el proceso. Sigue estos pasos:</p><div className="mt-5 rounded-2xl border-2 border-[#FFD500] bg-[#FFFDF5] p-4"><ol className="space-y-4 text-sm font-bold text-[#2D3139]"><li><span className="mr-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#FFD500]">1</span>Agrega el servidor en Minecraft.</li><li><span className="mr-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#FFD500]">2</span>Entra con tu usuario y crea tu contraseña si AuthMe te la pide.</li><li><span className="mr-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#FFD500]">3</span>Abre el chat y escribe exactamente el comando de abajo.</li><li><span className="mr-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#FFD500]">4</span>Espera el mensaje de cuenta verificada.</li></ol></div><ConnectionDetails port={port} /><div className="mt-5 rounded-2xl border-2 border-emerald-300 bg-[#ECFDF3] p-4"><p className="font-black text-emerald-800">IMPORTANTE: debes escribir este comando en el chat</p><Command code={code} onCopy={onCopy} copied={copied} /></div><div className="mt-5 rounded-2xl border border-amber-200 bg-[#FFF7DC] p-4"><p className="font-bold text-[#8B6B00]">🔒 No compartas tu contraseña</p><p className="mt-1 text-sm font-medium leading-relaxed text-[#7A6330]">Usa una contraseña solo para Minecraft. No uses la de Google.</p></div><p className="mt-4 text-center text-sm font-black text-[#8B6B00]">⏰ Tienes aproximadamente {countdown} para usarlo.</p><p className="mt-1 text-center text-xs text-[#9A8D70]">El código se vence a las {expiresAt ? new Date(expiresAt).toLocaleTimeString('es-PE') : 'pronto'}.</p><button type="button" onClick={onNext} className="mt-6 w-full rounded-xl bg-[#FFD500] px-5 py-3 font-black text-black">Ya escribí /link en el chat ✅</button><button type="button" onClick={onRegenerate} disabled={saving} className="mt-3 w-full rounded-xl border border-orange-200 bg-[#FFF7DC] px-5 py-3 text-sm font-black text-[#8B6B00] disabled:opacity-50">{saving ? 'Generando otro código...' : '⚠️ No funciona: generar otro código'}</button><button type="button" onClick={onBack} className="mt-3 w-full rounded-xl border border-[#E8DFC5] px-5 py-3 text-sm font-bold text-[#64748B]">✏️ Cambiar mi usuario</button></Card>;
+  return (
+    <Card title="Entra al servidor y escribe el comando" icon="⚡">
+      {/* Banner de Plataforma */}
+      <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 mb-4">
+        <span className="font-display font-bold text-xs text-gray-700">
+          {isJava ? '☕ Plataforma: Minecraft Java' : '📱 Plataforma: Minecraft Bedrock'}
+        </span>
+        <span className="text-xs font-mono font-bold text-[#2D3139]">@{username}</span>
+      </div>
+
+      {/* 1. Dirección del Servidor */}
+      <div className="rounded-xl border border-[#E8DFC5] bg-[#FFFDF5] p-3.5 mb-4">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Dirección del Servidor</p>
+            <p className="font-mono text-base font-black text-[#2D3139]">mc.milumon.dev</p>
+          </div>
+          <button
+            type="button"
+            onClick={onCopyIp}
+            className="rounded-lg bg-[#FFD500] hover:brightness-105 px-3 py-1.5 text-xs font-display font-black text-black transition-all cursor-pointer shrink-0"
+          >
+            {ipCopied ? '✅ ¡Copiada!' : 'Copiar IP'}
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Comando a escribir */}
+      <div className="rounded-2xl border-2 border-emerald-400 bg-[#ECFDF3] p-4 text-center space-y-3">
+        <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+          Escribe este comando en el chat de Minecraft:
+        </p>
+        <div className="bg-white border border-emerald-200 rounded-xl py-2 px-3 font-mono text-2xl font-black tracking-wider text-emerald-800">
+          /link {code}
+        </div>
+        <button
+          type="button"
+          onClick={onCopy}
+          className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 font-display font-bold text-sm transition-all cursor-pointer"
+        >
+          {copied ? '✅ ¡Comando Copiado!' : '📋 Copiar comando /link'}
+        </button>
+      </div>
+
+      {/* Pasos rápidos */}
+      <div className="mt-4 bg-white border border-gray-100 rounded-xl p-3 space-y-1.5 text-xs font-sans text-gray-600">
+        <p><strong>1.</strong> Entra a <strong>mc.milumon.dev</strong> en Minecraft.</p>
+        <p><strong>2.</strong> Abre el chat (tecla <strong>T</strong>) y envía <strong>/link {code}</strong>.</p>
+        <p><strong>3.</strong> ¡Listo! Tu cuenta se vinculará de inmediato.</p>
+      </div>
+
+      {/* Temporizador */}
+      <p className="mt-4 text-center text-xs font-bold text-amber-700">
+        ⏰ Código válido por {countdown} (vence a las {expiresAt ? new Date(expiresAt).toLocaleTimeString('es-PE') : 'pronto'}).
+      </p>
+
+      {/* Botones de acción */}
+      <button
+        type="button"
+        onClick={onNext}
+        className="mt-5 w-full rounded-xl bg-[#FFD500] hover:brightness-105 px-5 py-3 font-display font-black text-black transition-all cursor-pointer"
+      >
+        Ya escribí /link en el chat ✅
+      </button>
+
+      <div className="flex gap-2 mt-2.5">
+        <button
+          type="button"
+          onClick={onRegenerate}
+          disabled={saving}
+          className="flex-1 rounded-xl border border-amber-200 bg-[#FFF7DC] hover:bg-[#ffefc4] py-2 text-xs font-display font-bold text-amber-900 transition-all disabled:opacity-50 cursor-pointer"
+        >
+          {saving ? 'Generando...' : '⚠️ Generar otro código'}
+        </button>
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex-1 rounded-xl border border-[#E8DFC5] bg-white hover:bg-gray-50 py-2 text-xs font-display font-bold text-gray-600 transition-all cursor-pointer"
+        >
+          ✏️ Cambiar usuario
+        </button>
+      </div>
+    </Card>
+  );
 }
 
 function ExpiredCard({ saving, onRegenerate }: Readonly<{ saving: boolean; onRegenerate: () => void }>) {
-  return <section className="mb-6 rounded-3xl border-2 border-orange-300 bg-[#FFF7DC] p-6 shadow-[7px_7px_0_#FCD34D] sm:p-8"><div className="flex items-center gap-3"><span className="text-4xl" aria-hidden>⏰</span><h2 className="font-display text-2xl font-black text-[#7A4A00]">Tu código ya venció</h2></div><p className="mt-4 text-sm font-medium leading-relaxed text-[#7A6330]">No pasa nada: tu cuenta sigue guardada. Genera un código nuevo y úsalo en Minecraft.</p><button type="button" onClick={onRegenerate} disabled={saving} className="mt-5 w-full rounded-xl bg-[#FFD500] px-5 py-4 text-base font-black text-black disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Generando...' : 'Generar un código nuevo'}</button></section>;
+  return (
+    <section className="mb-6 rounded-3xl border-2 border-orange-300 bg-[#FFF7DC] p-6 shadow-[7px_7px_0_#FCD34D] sm:p-8">
+      <div className="flex items-center gap-3">
+        <span className="text-4xl" aria-hidden>⏰</span>
+        <h2 className="font-display text-2xl font-black text-[#7A4A00]">Tu código ya venció</h2>
+      </div>
+      <p className="mt-4 text-sm font-medium leading-relaxed text-[#7A6330]">
+        No pasa nada: tu cuenta sigue registrada. Genera un código nuevo y úsalo en el chat de Minecraft.
+      </p>
+      <button
+        type="button"
+        onClick={onRegenerate}
+        disabled={saving}
+        className="mt-5 w-full rounded-xl bg-[#FFD500] hover:brightness-105 px-5 py-3.5 font-display font-black text-black transition-all disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+      >
+        {saving ? 'Generando...' : 'Generar un código nuevo'}
+      </button>
+    </section>
+  );
 }
 
 function StepFour({ code, saving, onBack, onRegenerate, onCopy, copied, message }: Readonly<{ code: string; saving: boolean; onBack: () => void; onRegenerate: () => void; onCopy: () => void; copied: boolean; message: string | null }>) {
-  return <Card title="Estamos comprobando" icon="🔎"><div className="text-center"><div className="mx-auto flex h-20 w-20 animate-pulse items-center justify-center rounded-full bg-[#FFF7DC] text-4xl">🐣</div><p className="mt-5 text-lg font-bold text-[#2D3139]">Mira el chat de Minecraft</p><p className="mt-2 text-sm font-medium leading-relaxed text-[#64748B]">Si todavía no lo hiciste, escribe ahora este comando en el chat:</p></div><Command code={code} onCopy={onCopy} copied={copied} /><p className="mt-4 text-center text-xs font-medium text-[#9A8D70]">{message || 'Esperando la confirmación del servidor...'}</p><button type="button" onClick={onRegenerate} disabled={saving} className="mt-5 w-full rounded-xl border border-orange-200 bg-[#FFF7DC] px-5 py-3 text-sm font-black text-[#8B6B00] disabled:opacity-50">{saving ? 'Generando otro código...' : '⚠️ No funciona: generar otro código'}</button><button type="button" onClick={onBack} className="mt-3 w-full rounded-xl border border-[#E8DFC5] px-5 py-3 text-sm font-bold text-[#64748B]">✏️ Cambiar mi usuario</button></Card>;
-}
+  return (
+    <Card title="Comprobando vinculación" icon="🔎">
+      <div className="text-center">
+        <div className="mx-auto flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-[#FFF7DC] text-3xl">
+          🐣
+        </div>
+        <p className="mt-4 text-base font-bold text-[#2D3139]">Esperando confirmación del servidor</p>
+        <p className="mt-1 text-xs font-medium leading-relaxed text-[#64748B]">
+          Si aún no lo hiciste, envía este comando en el chat de Minecraft:
+        </p>
+      </div>
 
-function Command({ code, onCopy, copied }: Readonly<{ code: string; onCopy: () => void; copied: boolean }>) {
-  return <div className="mt-5 rounded-2xl border-2 border-emerald-300 bg-[#ECFDF3] p-4"><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Comando para Minecraft</p><p className="mt-2 break-all font-mono text-2xl font-black tracking-wide text-[#166534]">/link {code}</p><button type="button" onClick={onCopy} className="mt-4 w-full rounded-xl bg-[#22C55E] px-4 py-3 text-sm font-black text-white">{copied ? '✅ ¡Copiado!' : '📋 Copiar comando'}</button></div>;
+      <div className="mt-4 rounded-xl border border-emerald-300 bg-[#ECFDF3] p-3 text-center">
+        <p className="font-mono text-xl font-black text-emerald-800">/link {code}</p>
+        <button
+          type="button"
+          onClick={onCopy}
+          className="mt-2 text-xs font-display font-bold text-emerald-700 underline cursor-pointer"
+        >
+          {copied ? '✅ ¡Copiado!' : 'Copiar comando'}
+        </button>
+      </div>
+
+      <p className="mt-4 text-center text-xs font-medium text-[#9A8D70]">{message || 'Detectando cuando ejecutes /link...'}</p>
+
+      <div className="flex gap-2 mt-5">
+        <button
+          type="button"
+          onClick={onRegenerate}
+          disabled={saving}
+          className="flex-1 rounded-xl border border-amber-200 bg-[#FFF7DC] hover:bg-[#ffefc4] py-2 text-xs font-display font-bold text-amber-900 transition-all disabled:opacity-50 cursor-pointer"
+        >
+          {saving ? 'Generando...' : '⚠️ Generar otro código'}
+        </button>
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex-1 rounded-xl border border-[#E8DFC5] bg-white hover:bg-gray-50 py-2 text-xs font-display font-bold text-gray-600 transition-all cursor-pointer"
+        >
+          ✏️ Cambiar usuario
+        </button>
+      </div>
+    </Card>
+  );
 }
 
 function Card({ title, icon, children }: Readonly<{ title: string; icon: string; children: ReactNode }>) {
-  return <section className="rounded-3xl border-2 border-[#FFD500] bg-white p-6 shadow-[7px_7px_0_#FFDFA0] sm:p-8"><div className="flex items-center gap-3"><span className="text-4xl" aria-hidden>{icon}</span><h2 className="font-display text-2xl font-black text-[#2D3139]">{title}</h2></div>{children}</section>;
+  return (
+    <section className="rounded-3xl border-2 border-[#FFD500] bg-white p-6 shadow-[7px_7px_0_#FFDFA0] sm:p-8">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-3xl" aria-hidden>{icon}</span>
+        <h2 className="font-display text-2xl font-black text-[#2D3139]">{title}</h2>
+      </div>
+      {children}
+    </section>
+  );
 }
 
 function SuccessCard({ accounts, onLink }: Readonly<{ accounts: Account[]; onLink: (edition: 'java' | 'bedrock', replaceExisting: boolean) => void }>) {
-  return <section className="rounded-3xl border-2 border-emerald-300 bg-white p-6 shadow-[7px_7px_0_#A7F3D0] sm:p-10"><div className="text-center"><div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl bg-[#FFF7DC] text-5xl">🐣</div><p className="mt-5 text-sm font-bold uppercase tracking-widest text-emerald-600">Tus cuentas de Minecraft</p><h2 className="mt-2 font-display text-3xl font-black text-[#2D3139]">¡Todo listo! 🎉</h2><p className="mt-3 text-sm font-medium leading-relaxed text-[#64748B]">Puedes tener una cuenta Java y una cuenta Bedrock.</p></div><div className="mt-6 space-y-3">{(['java', 'bedrock'] as const).map((edition) => { const linkedAccount = accounts.find((account) => account.edition === edition && isVerified(account)); const label = edition === 'java' ? 'Minecraft Java' : 'Minecraft Bedrock'; return <div key={edition} className="rounded-2xl border border-[#E8DFC5] bg-[#FFFDF5] p-4"><div className="flex items-center justify-between gap-3"><div className="text-left"><p className="font-black text-[#2D3139]">{label}</p>{linkedAccount ? <p className="mt-1 text-sm font-medium text-[#64748B]">{linkedAccount.username} · Activa ✅</p> : <p className="mt-1 text-sm font-medium text-[#9A8D70]">Todavía no vinculada</p>}</div><button type="button" onClick={() => onLink(edition, Boolean(linkedAccount))} className="shrink-0 rounded-xl bg-[#FFD500] px-3 py-2 text-xs font-black text-black">{linkedAccount ? 'Cambiar' : 'Vincular'}</button></div></div>; })}</div></section>;
+  return (
+    <section className="rounded-3xl border-2 border-emerald-300 bg-white p-6 shadow-[7px_7px_0_#A7F3D0] sm:p-10">
+      <div className="text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF7DC] text-4xl">
+          🐣
+        </div>
+        <p className="mt-4 text-xs font-bold uppercase tracking-widest text-emerald-600">Tus cuentas de Minecraft</p>
+        <h2 className="mt-1 font-display text-2xl font-black text-[#2D3139]">¡Todo listo! 🎉</h2>
+        <p className="mt-2 text-sm font-medium leading-relaxed text-[#64748B]">
+          Tu cuenta está vinculada y con acceso activo al servidor.
+        </p>
+      </div>
+
+      <div className="mt-6 space-y-3">
+        {(['java', 'bedrock'] as const).map((edition) => {
+          const linkedAccount = accounts.find((account) => account.edition === edition && isVerified(account));
+          const label = edition === 'java' ? '☕ Minecraft Java' : '📱 Minecraft Bedrock';
+          return (
+            <div key={edition} className="rounded-2xl border border-[#E8DFC5] bg-[#FFFDF5] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-left">
+                  <p className="font-black text-[#2D3139] font-display text-sm">{label}</p>
+                  {linkedAccount ? (
+                    <p className="mt-0.5 text-xs font-semibold text-emerald-700">
+                      {linkedAccount.username} · Activa ✅
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 text-xs text-[#9A8D70]">Todavía no vinculada</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onLink(edition, Boolean(linkedAccount))}
+                  className="shrink-0 rounded-xl bg-[#FFD500] hover:brightness-105 px-3.5 py-2 text-xs font-display font-black text-black cursor-pointer"
+                >
+                  {linkedAccount ? 'Cambiar' : 'Vincular'}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
