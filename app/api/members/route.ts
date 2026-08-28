@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/members - Obtener lista de miembros (oficiales, moderadores, invitados y admins)
+// GET /api/members - Obtener lista de miembros aprobados (oficiales, moderadores, invitados y admins)
 export async function GET() {
   try {
     const { data: profiles, error } = await supabaseAdmin
@@ -16,15 +16,16 @@ export async function GET() {
     }
 
     const filtered = (profiles ?? [])
-      .filter((p) => Boolean(p.roblox_user && String(p.roblox_user).trim().length > 0))
+      .filter((p) => Boolean(p.roblox_user && String(p.roblox_user).trim().length > 0 && p.link_status === 'approved'))
       .map((p) => {
         const robloxUser = String(p.roblox_user || '');
         const robloxDisplayName = String(p.roblox_display_name || robloxUser || 'Pollito');
         const robloxAvatarUrl = typeof p.roblox_avatar_url === 'string' ? p.roblox_avatar_url : null;
-        const minecraftRank = typeof p.minecraft_rank === 'string' ? p.minecraft_rank : (p.link_status === 'approved' ? 'pollito_oficial' : 'pollito_invitado');
-        const isAdmin = Boolean(p.is_admin || robloxUser.toLowerCase().includes('milumon'));
+        const isAdmin = Boolean(p.is_admin || robloxUser.toLowerCase().includes('milumon') || p.minecraft_rank === 'pollito_admin');
+        const minecraftRank = isAdmin ? 'pollito_admin' : (typeof p.minecraft_rank === 'string' ? p.minecraft_rank : 'pollito_oficial');
 
         return {
+          id: String(p.id || robloxUser),
           roblox_user: robloxUser,
           roblox_display_name: robloxDisplayName,
           roblox_avatar_url: robloxAvatarUrl,

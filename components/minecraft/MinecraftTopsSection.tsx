@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Trophy, Crown, Shield, Users, Sparkles, ExternalLink, Gamepad2 } from 'lucide-react';
-import Image from 'next/image';
+import { Trophy, Crown, Shield, Users } from 'lucide-react';
 
 interface MemberItem {
   id: string;
-  name: string;
-  avatarUrl?: string | null;
-  minecraftRank?: string | null;
-  robloxUser?: string | null;
+  roblox_user: string;
+  roblox_display_name: string;
+  roblox_avatar_url?: string | null;
+  minecraft_rank?: string | null;
+  is_admin?: boolean;
 }
 
 export function MinecraftTopsSection() {
@@ -21,9 +21,12 @@ export function MinecraftTopsSection() {
     let active = true;
     fetch('/api/members')
       .then((res) => res.json())
-      .then((data: { members?: MemberItem[] }) => {
-        if (active && data.members) {
-          setMembers(data.members);
+      .then((data: unknown) => {
+        if (!active) return;
+        if (Array.isArray(data)) {
+          setMembers(data as MemberItem[]);
+        } else if (data && typeof data === 'object' && 'members' in data && Array.isArray((data as { members: unknown }).members)) {
+          setMembers((data as { members: MemberItem[] }).members);
         }
       })
       .catch(() => {})
@@ -33,35 +36,35 @@ export function MinecraftTopsSection() {
     return () => { active = false; };
   }, []);
 
-  const officials = members.filter((m) => m.minecraftRank === 'pollito_oficial');
-  const mods = members.filter((m) => m.minecraftRank === 'pollito_moderador' || m.minecraftRank === 'pollito_admin');
+  const officials = members.filter((m) => m.minecraft_rank === 'pollito_oficial');
+  const mods = members.filter((m) => m.minecraft_rank === 'pollito_moderador' || m.minecraft_rank === 'pollito_admin' || m.is_admin);
 
   const visibleList = activeTab === 'officials' ? officials : activeTab === 'mods' ? mods : members;
 
-  const getBadge = (rank?: string | null) => {
-    if (rank === 'pollito_admin') {
+  const getBadge = (m: MemberItem) => {
+    if (m.is_admin || m.minecraft_rank === 'pollito_admin') {
       return (
-        <span className="inline-flex items-center gap-1 rounded-lg bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-300">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-700">
           <Crown className="w-3 h-3 text-amber-500" /> Admin
         </span>
       );
     }
-    if (rank === 'pollito_moderador') {
+    if (m.minecraft_rank === 'pollito_moderador') {
       return (
-        <span className="inline-flex items-center gap-1 rounded-lg bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-300">
-          <Shield className="w-3 h-3 text-blue-500" /> Moderador 🛡️
+        <span className="inline-flex items-center gap-1 rounded-lg bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 text-[10px] font-bold text-purple-700">
+          <Shield className="w-3 h-3 text-purple-500" /> Mod 🛡️
         </span>
       );
     }
-    if (rank === 'pollito_oficial') {
+    if (m.minecraft_rank === 'pollito_oficial') {
       return (
-        <span className="inline-flex items-center gap-1 rounded-lg bg-yellow-500/15 border border-yellow-500/30 px-2 py-0.5 text-[10px] font-bold text-yellow-700 dark:text-yellow-300">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
           👑 Oficial
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 rounded-lg bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 px-2 py-0.5 text-[10px] font-bold text-gray-600 dark:text-gray-400">
+      <span className="inline-flex items-center gap-1 rounded-lg bg-neutral-200 border border-neutral-300 px-2 py-0.5 text-[10px] font-bold text-gray-700">
         🐣 Invitado
       </span>
     );
@@ -84,13 +87,13 @@ export function MinecraftTopsSection() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1.5 bg-[#FFFDF5] border border-[#E8DFC5] p-1 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-1.5 bg-[#FFFDF5] border border-[#E8DFC5] p-1 rounded-2xl shadow-xs">
           <button
             type="button"
             onClick={() => setActiveTab('officials')}
             className={`px-3.5 py-1.5 rounded-xl font-display font-bold text-xs transition-all cursor-pointer ${
               activeTab === 'officials'
-                ? 'bg-[#FFD500] text-black shadow-sm'
+                ? 'bg-[#FFD500] text-black shadow-xs'
                 : 'text-[#64748B] hover:text-black'
             }`}
           >
@@ -101,7 +104,7 @@ export function MinecraftTopsSection() {
             onClick={() => setActiveTab('mods')}
             className={`px-3.5 py-1.5 rounded-xl font-display font-bold text-xs transition-all cursor-pointer ${
               activeTab === 'mods'
-                ? 'bg-[#FFD500] text-black shadow-sm'
+                ? 'bg-[#FFD500] text-black shadow-xs'
                 : 'text-[#64748B] hover:text-black'
             }`}
           >
@@ -112,7 +115,7 @@ export function MinecraftTopsSection() {
             onClick={() => setActiveTab('all')}
             className={`px-3.5 py-1.5 rounded-xl font-display font-bold text-xs transition-all cursor-pointer ${
               activeTab === 'all'
-                ? 'bg-[#FFD500] text-black shadow-sm'
+                ? 'bg-[#FFD500] text-black shadow-xs'
                 : 'text-[#64748B] hover:text-black'
             }`}
           >
@@ -139,28 +142,29 @@ export function MinecraftTopsSection() {
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-[#FFF7DC] border border-[#FFDFA0] overflow-hidden flex items-center justify-center shrink-0">
-                  {m.avatarUrl ? (
+                  {m.roblox_avatar_url ? (
                     <img
-                      src={m.avatarUrl}
-                      alt={m.name}
+                      src={m.roblox_avatar_url}
+                      alt=""
+                      aria-hidden="true"
                       className="w-full h-full object-cover"
                       style={{ transform: 'scale(1.4) translateY(-5%)' }}
                     />
                   ) : (
-                    <span className="text-base">🐣</span>
+                    <span className="text-base" aria-hidden="true">🐣</span>
                   )}
                 </div>
                 <div className="min-w-0">
                   <h4 className="font-black text-xs text-[#2D3139] truncate">
-                    {m.name}
+                    {m.roblox_display_name}
                   </h4>
                   <p className="text-[10px] font-semibold text-[#64748B] truncate">
-                    @{m.robloxUser || 'comunidad'}
+                    @{m.roblox_user || 'comunidad'}
                   </p>
                 </div>
               </div>
 
-              <div>{getBadge(m.minecraftRank)}</div>
+              <div>{getBadge(m)}</div>
             </div>
           ))}
         </div>

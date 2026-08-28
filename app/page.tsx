@@ -1452,7 +1452,7 @@ export default function ComunidadPage() {
                             {member.roblox_avatar_url ? (
                               <img
                                 src={member.roblox_avatar_url}
-                                alt={member.roblox_display_name}
+                                alt="" aria-hidden="true"
                                 className="w-full h-full object-cover"
                                 style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }}
                               />
