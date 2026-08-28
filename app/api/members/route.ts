@@ -3,20 +3,43 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/members - Obtener lista de miembros (oficiales, invitados y admins)
+// GET /api/members - Obtener lista de miembros (oficiales, moderadores, invitados y admins)
 export async function GET() {
   try {
-    const { data: members, error } = await supabaseAdmin
+    const { data: profiles, error } = await supabaseAdmin
       .from('profiles')
-      .select('roblox_user, roblox_display_name, roblox_avatar_url, minecraft_rank, role, is_admin')
-      .eq('link_status', 'approved')
-      .order('roblox_display_name', { ascending: true });
+      .select('*');
 
     if (error) {
+      console.error('[GET /api/members error]:', error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(members || []);
+    const filtered = (profiles ?? [])
+      .filter((p) => Boolean(p.roblox_user && String(p.roblox_user).trim().length > 0))
+      .map((p) => {
+        const robloxUser = String(p.roblox_user || '');
+        const robloxDisplayName = String(p.roblox_display_name || robloxUser || 'Pollito');
+        const robloxAvatarUrl = typeof p.roblox_avatar_url === 'string' ? p.roblox_avatar_url : null;
+        const minecraftRank = typeof p.minecraft_rank === 'string' ? p.minecraft_rank : (p.link_status === 'approved' ? 'pollito_oficial' : 'pollito_invitado');
+        const isAdmin = Boolean(p.is_admin || robloxUser.toLowerCase().includes('milumon'));
+
+        return {
+          roblox_user: robloxUser,
+          roblox_display_name: robloxDisplayName,
+          roblox_avatar_url: robloxAvatarUrl,
+          minecraft_rank: minecraftRank,
+          is_admin: isAdmin,
+        };
+      });
+
+    filtered.sort((a, b) => a.roblox_display_name.localeCompare(b.roblox_display_name));
+
+    return NextResponse.json(filtered, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0, must-revalidate',
+      },
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

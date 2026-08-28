@@ -37,9 +37,9 @@ type Member = {
   roblox_user: string;
   roblox_display_name: string;
   roblox_avatar_url: string | null;
-  minecraft_rank?: string;
   role?: string;
   is_admin?: boolean;
+  minecraft_rank?: string;
 };
 
 type Slot = {
@@ -1372,7 +1372,7 @@ export default function ComunidadPage() {
                       : 'text-gray-500 hover:text-[#2D3139]'
                   }`}
                 >
-                  👑 Oficiales ({members.filter(m => m.minecraft_rank !== 'pollito_invitado').length})
+                  👑 Oficiales ({members.filter(m => m.minecraft_rank === 'pollito_oficial' || m.minecraft_rank === 'pollito_moderador' || m.minecraft_rank === 'pollito_admin' || m.is_admin).length})
                 </button>
                 <button
                   type="button"
@@ -1406,9 +1406,13 @@ export default function ComunidadPage() {
                 </motion.div>
               </div>
             ) : (() => {
-              const currentList = sortedMembers.filter(m => {
-                if (membersTab === 'oficiales') return m.minecraft_rank !== 'pollito_invitado';
-                if (membersTab === 'invitados') return m.minecraft_rank === 'pollito_invitado';
+              const currentList = members.filter(m => {
+                if (membersTab === 'oficiales') {
+                  return m.minecraft_rank === 'pollito_oficial' || m.minecraft_rank === 'pollito_moderador' || m.minecraft_rank === 'pollito_admin' || m.is_admin;
+                }
+                if (membersTab === 'invitados') {
+                  return m.minecraft_rank === 'pollito_invitado';
+                }
                 return true;
               });
 
