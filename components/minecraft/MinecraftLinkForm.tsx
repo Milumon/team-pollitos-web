@@ -509,7 +509,7 @@ function StepThree({
         onClick={onNext}
         className="mt-5 w-full rounded-xl bg-[#FFD500] hover:brightness-105 px-5 py-3 font-display font-black text-black transition-all cursor-pointer shadow-sm"
       >
-        Ya escribí /link en el chat ✅
+        Siguiente ➔
       </button>
 
       <div className="flex gap-2 mt-2.5">
