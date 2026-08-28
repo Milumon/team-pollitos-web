@@ -94,8 +94,11 @@ function getMemberDisplayName(status: InterviewStatus) {
 
 // Roles estáticos mapeados por Roblox username
 const getMemberRole = (username: string, member?: Member) => {
-  if (member?.is_admin || member?.role === 'admin' || member?.minecraft_rank === 'pollito_admin' || username.toLowerCase().includes('milumon')) {
-    return 'Admin 🐣';
+  if (username.toLowerCase().includes('milumon') || member?.minecraft_rank === 'pollito_admin') {
+    return 'Admin 👑';
+  }
+  if (member?.minecraft_rank === 'pollito_moderador' || member?.is_admin || member?.role === 'admin') {
+    return 'Moderador 🛡️';
   }
   if (member?.minecraft_rank === 'pollito_invitado') {
     return 'Pollito Invitado 🐣';
@@ -105,9 +108,10 @@ const getMemberRole = (username: string, member?: Member) => {
 
 const getRoleColor = (role: string) => {
   switch (role) {
-    case 'Admin 🐣': return 'bg-sky-50 text-sky-700 border border-sky-200';
-    case 'Pollito Oficial 👑': return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-    case 'Pollito Invitado 🐣': return 'bg-amber-50 text-amber-700 border border-amber-200';
+    case 'Admin 👑': return 'bg-red-50 text-red-700 border border-red-200 font-bold';
+    case 'Moderador 🛡️': return 'bg-purple-50 text-purple-700 border border-purple-200 font-bold';
+    case 'Pollito Oficial 👑': return 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold';
+    case 'Pollito Invitado 🐣': return 'bg-amber-50 text-amber-700 border border-amber-200 font-semibold';
     default: return 'bg-gray-50 text-gray-600 border border-gray-200';
   }
 };

@@ -27,7 +27,7 @@ type UserRankProfile = {
   roblox_user: string;
   roblox_display_name: string;
   roblox_avatar_url: string | null;
-  minecraft_rank: 'pollito_invitado' | 'pollito_oficial' | 'pollito_admin';
+  minecraft_rank: 'pollito_invitado' | 'pollito_oficial' | 'pollito_moderador' | 'pollito_admin';
   is_admin: boolean;
   minecraft_accounts: MinecraftAccount[];
   has_minecraft: boolean;
@@ -45,8 +45,9 @@ type Profile = {
 type TemporaryReset = { username: string; password: string; expiresAt: string };
 
 const RANKS = [
-  { value: 'pollito_invitado', label: 'Pollito Invitado', color: 'text-gray-400' },
-  { value: 'pollito_oficial', label: 'Pollito Oficial', color: 'text-yellow-400' },
+  { value: 'pollito_invitado', label: 'Pollito Invitado', color: 'text-amber-400' },
+  { value: 'pollito_oficial', label: 'Pollito Oficial', color: 'text-emerald-400' },
+  { value: 'pollito_moderador', label: 'Pollito Moderador', color: 'text-purple-400' },
   { value: 'pollito_admin', label: 'Pollito Admin', color: 'text-red-400' },
 ];
 
@@ -70,7 +71,7 @@ export default function MinecraftAdminView() {
   const [rankUsers, setRankUsers] = useState<UserRankProfile[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [rankOnlyWithMinecraft, setRankOnlyWithMinecraft] = useState(true);
-  const [rankFilter, setRankFilter] = useState<'all' | 'pollito_invitado' | 'pollito_oficial' | 'pollito_admin'>('all');
+  const [rankFilter, setRankFilter] = useState<'all' | 'pollito_invitado' | 'pollito_oficial' | 'pollito_moderador' | 'pollito_admin'>('all');
   
   // Shared state
   const [searchQuery, setSearchQuery] = useState('');
@@ -524,16 +525,19 @@ export default function MinecraftAdminView() {
                           )}
 
                           <span className={`rounded-md px-2 py-0.5 text-[10px] font-black uppercase ${
-                            user.minecraft_rank === 'pollito_admin' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' :
+                            user.minecraft_rank === 'pollito_admin' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                            user.minecraft_rank === 'pollito_moderador' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
                             user.minecraft_rank === 'pollito_oficial' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
                             'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                           }`}>
-                            {user.minecraft_rank === 'pollito_admin' ? 'Pollito Admin ⚡' : user.minecraft_rank === 'pollito_oficial' ? 'Pollito Oficial 👑' : 'Pollito Invitado 🐣'}
+                            {user.minecraft_rank === 'pollito_admin' ? 'Admin / Owner 👑' :
+                             user.minecraft_rank === 'pollito_moderador' ? 'Moderador 🛡️' :
+                             user.minecraft_rank === 'pollito_oficial' ? 'Pollito Oficial 👑' : 'Pollito Invitado 🐣'}
                           </span>
 
                           {user.is_admin && (
-                            <span className="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                              Admin Web 🛡️
+                            <span className="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                              Staff Web 🛡️
                             </span>
                           )}
                         </div>
@@ -541,39 +545,50 @@ export default function MinecraftAdminView() {
                     </div>
 
                     {/* Rank Selection Buttons */}
-                    <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         onClick={() => void updateRank(user.id, 'pollito_invitado')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                           user.minecraft_rank === 'pollito_invitado'
-                            ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                            ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20 font-black'
                             : 'bg-neutral-800 text-gray-400 hover:text-white hover:bg-neutral-700'
                         }`}
                       >
-                        Pollito Invitado
+                        Invitado 🐣
                       </button>
                       <button
                         type="button"
                         onClick={() => void updateRank(user.id, 'pollito_oficial')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                           user.minecraft_rank === 'pollito_oficial'
-                            ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
+                            ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20 font-black'
                             : 'bg-neutral-800 text-gray-400 hover:text-white hover:bg-neutral-700'
                         }`}
                       >
-                        Pollito Oficial
+                        Oficial 👑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void updateRank(user.id, 'pollito_moderador')}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                          user.minecraft_rank === 'pollito_moderador'
+                            ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20 font-black'
+                            : 'bg-neutral-800 text-gray-400 hover:text-white hover:bg-neutral-700'
+                        }`}
+                      >
+                        Moderador 🛡️
                       </button>
                       <button
                         type="button"
                         onClick={() => void updateRank(user.id, 'pollito_admin')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                           user.minecraft_rank === 'pollito_admin'
-                            ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+                            ? 'bg-red-500 text-white shadow-md shadow-red-500/20 font-black'
                             : 'bg-neutral-800 text-gray-400 hover:text-white hover:bg-neutral-700'
                         }`}
                       >
-                        Pollito Admin
+                        Admin ⚡
                       </button>
                     </div>
                   </div>
@@ -652,8 +667,16 @@ export default function MinecraftAdminView() {
                   <button
                     type="button"
                     disabled={bulkActionLoading}
+                    onClick={() => void handleBulkRankUpdate('pollito_moderador')}
+                    className="rounded-xl bg-purple-500 px-3.5 py-2 text-xs font-bold text-white hover:bg-purple-400 disabled:opacity-50 transition-all shadow-md cursor-pointer"
+                  >
+                    Asignar Moderador
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
                     onClick={() => void handleBulkRankUpdate('pollito_admin')}
-                    className="rounded-xl bg-sky-500 px-3.5 py-2 text-xs font-bold text-white hover:bg-sky-400 disabled:opacity-50 transition-all shadow-md cursor-pointer"
+                    className="rounded-xl bg-red-500 px-3.5 py-2 text-xs font-bold text-white hover:bg-red-400 disabled:opacity-50 transition-all shadow-md cursor-pointer"
                   >
                     Asignar Admin
                   </button>

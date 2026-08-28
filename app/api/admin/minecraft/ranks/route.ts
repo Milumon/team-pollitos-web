@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_RANKS = ['pollito_invitado', 'pollito_oficial', 'pollito_admin'];
+const VALID_RANKS = ['pollito_invitado', 'pollito_oficial', 'pollito_moderador', 'pollito_admin'];
 
 export async function GET(request: NextRequest) {
   if (!await isAuthorized(request)) {
