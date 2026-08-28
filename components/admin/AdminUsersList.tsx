@@ -9,13 +9,13 @@ import {
   Shield,
   Volume2,
   VolumeX,
-  UserCheck,
   Gamepad2,
   Edit3,
   CheckSquare,
   Square,
+  Crown,
   Sparkles,
-  Crown
+  UserCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -49,7 +49,6 @@ export function AdminUsersList() {
   const filteredUsers = useMemo(() => {
     let result = users;
 
-    // Filter by tab
     if (activeTab === 'approved') {
       result = result.filter((u) => u.linkStatus === 'approved');
     } else if (activeTab === 'pending') {
@@ -64,7 +63,6 @@ export function AdminUsersList() {
       result = result.filter((u) => u.minecraftRank === 'pollito_invitado' || (!u.minecraftRank && u.linkStatus !== 'approved'));
     }
 
-    // Search query
     const needle = deferredSearch.trim().toLowerCase();
     if (!needle) return result;
 
@@ -114,7 +112,7 @@ export function AdminUsersList() {
   };
 
   const selectAllVisible = () => {
-    if (selectedIds.size === visibleUsers.length) {
+    if (selectedIds.size === visibleUsers.length && visibleUsers.length > 0) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(visibleUsers.map((u) => u.id)));
@@ -122,7 +120,7 @@ export function AdminUsersList() {
   };
 
   const selectAllFiltered = () => {
-    if (selectedIds.size === filteredUsers.length) {
+    if (selectedIds.size === filteredUsers.length && filteredUsers.length > 0) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(filteredUsers.map((u) => u.id)));
@@ -178,12 +176,12 @@ export function AdminUsersList() {
   };
 
   return (
-    <section className="space-y-5 rounded-2xl border border-neutral-700/60 bg-[#2b2d31] p-5 shadow-[0_4px_12px_rgba(0,0,0,.25)] animate-fade-in relative pb-24">
+    <section className="space-y-4 sm:space-y-5 rounded-2xl border border-neutral-700/60 bg-[#2b2d31] p-3.5 sm:p-5 shadow-[0_4px_12px_rgba(0,0,0,.25)] animate-fade-in relative pb-28 sm:pb-24">
       {/* Header & Search */}
-      <div className="flex flex-col gap-4 border-b border-neutral-700/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3.5 border-b border-neutral-700/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Padrón de Miembros</span>
-          <h1 className="mt-0.5 font-display text-xl font-bold leading-none text-white">Gestión de Usuarios</h1>
+          <h1 className="mt-0.5 font-display text-lg sm:text-xl font-bold leading-none text-white">Gestión de Usuarios</h1>
           <p className="mt-1 text-xs font-semibold text-gray-400">
             Administra perfiles de Roblox, estado de vinculación, rangos unificados y permisos.
           </p>
@@ -201,13 +199,13 @@ export function AdminUsersList() {
         </form>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1.5 rounded-xl border border-neutral-700/60 bg-[#202226] p-1 text-xs font-bold">
+      {/* Filter Tabs - Horizontal Scroll on Mobile */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex overflow-x-auto pb-1 sm:pb-0 gap-1.5 rounded-xl border border-neutral-700/60 bg-[#202226] p-1 text-xs font-bold no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('all')}
-            className={`rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
+            className={`shrink-0 rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
               activeTab === 'all' ? 'bg-amber-500 text-black shadow-sm font-black' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -216,7 +214,7 @@ export function AdminUsersList() {
           <button
             type="button"
             onClick={() => setActiveTab('approved')}
-            className={`rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
+            className={`shrink-0 rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
               activeTab === 'approved' ? 'bg-emerald-500 text-black shadow-sm font-black' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -225,7 +223,7 @@ export function AdminUsersList() {
           <button
             type="button"
             onClick={() => setActiveTab('pending')}
-            className={`rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
+            className={`shrink-0 rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
               activeTab === 'pending' ? 'bg-yellow-500 text-black shadow-sm font-black' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -234,7 +232,7 @@ export function AdminUsersList() {
           <button
             type="button"
             onClick={() => setActiveTab('rejected')}
-            className={`rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
+            className={`shrink-0 rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
               activeTab === 'rejected' ? 'bg-red-500 text-white shadow-sm font-black' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -243,7 +241,7 @@ export function AdminUsersList() {
           <button
             type="button"
             onClick={() => setActiveTab('staff')}
-            className={`rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
+            className={`shrink-0 rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
               activeTab === 'staff' ? 'bg-purple-500 text-white shadow-sm font-black' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -252,7 +250,7 @@ export function AdminUsersList() {
           <button
             type="button"
             onClick={() => setActiveTab('official')}
-            className={`rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
+            className={`shrink-0 rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
               activeTab === 'official' ? 'bg-emerald-600 text-white shadow-sm font-black' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -261,7 +259,7 @@ export function AdminUsersList() {
           <button
             type="button"
             onClick={() => setActiveTab('guest')}
-            className={`rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
+            className={`shrink-0 rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
               activeTab === 'guest' ? 'bg-amber-600 text-white shadow-sm font-black' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -274,26 +272,26 @@ export function AdminUsersList() {
           <button
             type="button"
             onClick={selectAllVisible}
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-700/60 bg-[#202226] px-3 py-1.5 font-bold text-gray-300 hover:text-white transition-colors cursor-pointer"
+            className="flex flex-1 sm:flex-initial justify-center items-center gap-1.5 rounded-lg border border-neutral-700/60 bg-[#202226] px-2.5 sm:px-3 py-1.5 font-bold text-gray-300 hover:text-white transition-colors cursor-pointer text-[11px] sm:text-xs"
           >
             {selectedIds.size === visibleUsers.length && visibleUsers.length > 0 ? (
-              <CheckSquare className="h-4 w-4 text-amber-400" />
+              <CheckSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-400 shrink-0" />
             ) : (
-              <Square className="h-4 w-4 text-gray-500" />
+              <Square className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 shrink-0" />
             )}
-            Página actual ({visibleUsers.length})
+            Página ({visibleUsers.length})
           </button>
           <button
             type="button"
             onClick={selectAllFiltered}
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-700/60 bg-[#202226] px-3 py-1.5 font-bold text-gray-300 hover:text-white transition-colors cursor-pointer"
+            className="flex flex-1 sm:flex-initial justify-center items-center gap-1.5 rounded-lg border border-neutral-700/60 bg-[#202226] px-2.5 sm:px-3 py-1.5 font-bold text-gray-300 hover:text-white transition-colors cursor-pointer text-[11px] sm:text-xs"
           >
             {selectedIds.size === filteredUsers.length && filteredUsers.length > 0 ? (
-              <CheckSquare className="h-4 w-4 text-amber-400" />
+              <CheckSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-400 shrink-0" />
             ) : (
-              <Square className="h-4 w-4 text-gray-500" />
+              <Square className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 shrink-0" />
             )}
-            Todos filtrados ({filteredUsers.length})
+            Filtrados ({filteredUsers.length})
           </button>
         </div>
       </div>
@@ -310,7 +308,7 @@ export function AdminUsersList() {
         </p>
       )}
 
-      {/* Table Content */}
+      {/* Content */}
       {loading ? (
         <div className="py-24 text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></div>
@@ -323,7 +321,187 @@ export function AdminUsersList() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="overflow-x-auto rounded-xl border border-neutral-700/60 bg-[#202226] shadow-md">
+          {/* ========================================================= */}
+          {/* 1. MOBILE CARD VIEW (Visible on screens < md)            */}
+          {/* ========================================================= */}
+          <div className="grid grid-cols-1 gap-2.5 md:hidden">
+            {visibleUsers.map((user) => {
+              const isSelected = selectedIds.has(user.id);
+              const isOwner = user.email.toLowerCase().includes('milumon') || user.minecraftRank === 'pollito_admin';
+              const isMod = user.minecraftRank === 'pollito_moderador';
+              const isOficial = user.minecraftRank === 'pollito_oficial';
+
+              return (
+                <div
+                  key={user.id}
+                  onClick={() => toggleSelectUser(user.id)}
+                  className={`rounded-xl border p-3.5 transition-all cursor-pointer ${
+                    isSelected
+                      ? 'border-amber-500/50 bg-amber-500/10 shadow-sm'
+                      : 'border-neutral-700/60 bg-[#202226] hover:border-neutral-600'
+                  }`}
+                >
+                  {/* Top: Checkbox, Avatar, User Info & Badges */}
+                  <div className="flex items-start gap-3">
+                    <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectUser(user.id)}
+                        className="h-4 w-4 rounded border-neutral-700 bg-neutral-800 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                      />
+                    </div>
+
+                    {user.robloxAvatarUrl ? (
+                      <img
+                        src={user.robloxAvatarUrl}
+                        alt={user.robloxDisplayName || user.robloxUser || 'Avatar'}
+                        className="h-11 w-11 shrink-0 rounded-xl border border-neutral-700/60 bg-neutral-800 object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-neutral-700/60 bg-neutral-800 text-lg">
+                        🐣
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="truncate font-bold text-white text-sm">
+                          {user.robloxDisplayName || 'Usuario'}
+                        </p>
+                        <span
+                          className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase ${
+                            isOwner
+                              ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                              : isMod
+                              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                              : isOficial
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          }`}
+                        >
+                          {isOwner && <Crown className="h-2.5 w-2.5 text-red-400" />}
+                          {isMod && <Shield className="h-2.5 w-2.5 text-purple-400" />}
+                          {isOficial && '👑'}
+                          {!isOwner && !isMod && !isOficial && '🐣'}
+                          {isOwner ? 'Admin' : isMod ? 'Mod' : isOficial ? 'Oficial' : 'Invitado'}
+                        </span>
+                      </div>
+                      <p className="truncate text-xs text-gray-400">@{user.robloxUser || 'sin-roblox'}</p>
+                      <p className="truncate text-[10px] text-gray-500 font-mono mt-0.5">{user.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Status & Permissions Subrow */}
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-700/40 pt-2 text-xs">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${
+                          user.linkStatus === 'approved'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            : user.linkStatus === 'pending'
+                            ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                            : user.linkStatus === 'rejected'
+                            ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                            : 'bg-neutral-800 text-gray-400 border border-neutral-700'
+                        }`}
+                      >
+                        {user.linkStatus === 'approved' && <CheckCircle2 className="h-3 w-3" />}
+                        {user.linkStatus === 'rejected' && <XCircle className="h-3 w-3" />}
+                        {getAdminUserStatusLabel(user.linkStatus)}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void runAction(user.id, '/api/admin/users/soundboard-toggle', {
+                            userId: user.id,
+                            disabled: !user.soundboardDisabled,
+                          });
+                        }}
+                        disabled={updatingId === user.id}
+                        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                          user.soundboardDisabled
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        }`}
+                      >
+                        {user.soundboardDisabled ? (
+                          <>
+                            <VolumeX className="h-3 w-3" /> Audio Bloqueado
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="h-3 w-3" /> Audio Activo
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Quick Row Buttons */}
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {user.linkStatus === 'pending' && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={updatingId === user.id}
+                            onClick={() =>
+                              void runAction(user.id, '/api/admin/users/update', {
+                                userId: user.id,
+                                linkStatus: 'approved',
+                              })
+                            }
+                            className="rounded-lg bg-emerald-500/20 border border-emerald-500/40 p-1.5 text-emerald-300 cursor-pointer"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={updatingId === user.id}
+                            onClick={() =>
+                              void runAction(user.id, '/api/admin/users/update', {
+                                userId: user.id,
+                                linkStatus: 'rejected',
+                                rejectionReason: 'Rechazado por moderación.',
+                              })
+                            }
+                            className="rounded-lg bg-red-500/20 border border-red-500/40 p-1.5 text-red-300 cursor-pointer"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+
+                      {user.robloxUser && (
+                        <Link
+                          href={`/admin/minecraft?busqueda=${encodeURIComponent(user.robloxUser)}`}
+                          title="Gestionar en Minecraft"
+                          className="rounded-lg bg-neutral-800 border border-neutral-700 p-1.5 text-gray-300 hover:text-white"
+                        >
+                          <Gamepad2 className="h-4 w-4" />
+                        </Link>
+                      )}
+
+                      <Link
+                        href={`/admin/usuarios/${encodeURIComponent(user.id)}`}
+                        className="flex items-center gap-1 rounded-lg bg-amber-500 px-2.5 py-1 text-xs font-bold text-black hover:bg-amber-400"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        Editar
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ========================================================= */}
+          {/* 2. DESKTOP TABLE VIEW (Visible on screens >= md)         */}
+          {/* ========================================================= */}
+          <div className="hidden md:block overflow-x-auto rounded-xl border border-neutral-700/60 bg-[#202226] shadow-md">
             <table className="w-full border-collapse text-left text-xs">
               <thead>
                 <tr className="border-b border-neutral-700/60 bg-neutral-900/50 font-bold uppercase tracking-wider text-gray-400">
@@ -482,7 +660,6 @@ export function AdminUsersList() {
                       {/* Row Actions */}
                       <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="inline-flex flex-wrap justify-end gap-1.5">
-                          {/* Quick Approve/Reject if pending */}
                           {user.linkStatus === 'pending' && (
                             <>
                               <button
@@ -517,7 +694,6 @@ export function AdminUsersList() {
                             </>
                           )}
 
-                          {/* Jump to Minecraft admin */}
                           {user.robloxUser && (
                             <Link
                               href={`/admin/minecraft?busqueda=${encodeURIComponent(user.robloxUser)}`}
@@ -528,7 +704,6 @@ export function AdminUsersList() {
                             </Link>
                           )}
 
-                          {/* Full Edit Link */}
                           <Link
                             href={`/admin/usuarios/${encodeURIComponent(user.id)}`}
                             aria-label={`Editar ${user.robloxDisplayName || user.robloxUser || user.email}`}
@@ -548,11 +723,11 @@ export function AdminUsersList() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-neutral-700/60 pt-4 text-xs font-semibold">
-              <span className="text-gray-400">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-neutral-700/60 pt-4 text-xs font-semibold">
+              <span className="text-gray-400 text-center sm:text-left">
                 Mostrando {(page - 1) * USERS_PER_PAGE + 1} - {Math.min(page * USERS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length} usuarios
               </span>
-              <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-700/60 bg-[#202226] p-1">
+              <div className="inline-flex justify-center items-center gap-2 rounded-xl border border-neutral-700/60 bg-[#202226] p-1">
                 <button
                   type="button"
                   aria-label="Página anterior"
@@ -580,14 +755,14 @@ export function AdminUsersList() {
         </div>
       )}
 
-      {/* Floating Bulk Action Bar */}
+      {/* Floating Bulk Action Bar - Mobile Optimized */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex max-w-4xl flex-wrap items-center gap-3 rounded-2xl border border-neutral-700 bg-neutral-900/95 px-5 py-3.5 shadow-2xl backdrop-blur-md animate-slide-up">
-          <div className="flex items-center gap-2 border-r border-neutral-700 pr-3">
+        <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex w-[94vw] max-w-4xl flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-neutral-700 bg-neutral-900/95 p-3 sm:px-5 sm:py-3.5 shadow-2xl backdrop-blur-md animate-slide-up">
+          <div className="flex items-center gap-2 pr-2">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs font-black text-black">
               {selectedIds.size}
             </span>
-            <span className="text-xs font-bold text-white">Seleccionados</span>
+            <span className="text-xs font-bold text-white hidden sm:inline">Seleccionados</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
@@ -596,7 +771,7 @@ export function AdminUsersList() {
               type="button"
               disabled={bulkLoading}
               onClick={() => void runBulkAction('approve')}
-              className="flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1 rounded-xl bg-emerald-600 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
               Aprobar
@@ -605,41 +780,37 @@ export function AdminUsersList() {
               type="button"
               disabled={bulkLoading}
               onClick={() => void runBulkAction('reject', { reason: 'Rechazado por moderación.' })}
-              className="flex items-center gap-1 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1 rounded-xl bg-red-600 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
             >
               <XCircle className="h-3.5 w-3.5" />
               Rechazar
             </button>
-
-            <span className="text-neutral-600">|</span>
 
             {/* Bulk Rank Changes */}
             <button
               type="button"
               disabled={bulkLoading}
               onClick={() => void runBulkAction('set_rank', { rank: 'pollito_oficial' })}
-              className="flex items-center gap-1 rounded-xl bg-emerald-500 px-3 py-1.5 text-xs font-bold text-black hover:bg-emerald-400 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1 rounded-xl bg-emerald-500 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-black hover:bg-emerald-400 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
             >
-              👑 Hacer Oficial
+              👑 Oficial
             </button>
             <button
               type="button"
               disabled={bulkLoading}
               onClick={() => void runBulkAction('set_rank', { rank: 'pollito_moderador' })}
-              className="flex items-center gap-1 rounded-xl bg-purple-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-500 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1 rounded-xl bg-purple-600 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-500 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
             >
-              🛡️ Hacer Mod
+              🛡️ Mod
             </button>
             <button
               type="button"
               disabled={bulkLoading}
               onClick={() => void runBulkAction('set_rank', { rank: 'pollito_invitado' })}
-              className="flex items-center gap-1 rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-black hover:bg-amber-400 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1 rounded-xl bg-amber-500 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-black hover:bg-amber-400 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
             >
-              🐣 Hacer Invitado
+              🐣 Invitado
             </button>
-
-            <span className="text-neutral-600">|</span>
 
             {/* Bulk Soundboard Toggle */}
             <button
@@ -647,7 +818,7 @@ export function AdminUsersList() {
               disabled={bulkLoading}
               onClick={() => void runBulkAction('soundboard_enable')}
               title="Habilitar permisos de sonidos y stream"
-              className="flex items-center gap-1 rounded-xl bg-neutral-800 border border-neutral-700 px-2.5 py-1.5 text-xs font-bold text-emerald-400 hover:bg-neutral-700 disabled:opacity-50 transition-all cursor-pointer"
+              className="flex items-center gap-1 rounded-xl bg-neutral-800 border border-neutral-700 px-2 sm:px-2.5 py-1.5 text-xs font-bold text-emerald-400 hover:bg-neutral-700 disabled:opacity-50 transition-all cursor-pointer"
             >
               <Volume2 className="h-3.5 w-3.5" />
             </button>
@@ -656,7 +827,7 @@ export function AdminUsersList() {
               disabled={bulkLoading}
               onClick={() => void runBulkAction('soundboard_disable')}
               title="Bloquear permisos de sonidos y stream"
-              className="flex items-center gap-1 rounded-xl bg-neutral-800 border border-neutral-700 px-2.5 py-1.5 text-xs font-bold text-red-400 hover:bg-neutral-700 disabled:opacity-50 transition-all cursor-pointer"
+              className="flex items-center gap-1 rounded-xl bg-neutral-800 border border-neutral-700 px-2 sm:px-2.5 py-1.5 text-xs font-bold text-red-400 hover:bg-neutral-700 disabled:opacity-50 transition-all cursor-pointer"
             >
               <VolumeX className="h-3.5 w-3.5" />
             </button>
@@ -665,9 +836,9 @@ export function AdminUsersList() {
           <button
             type="button"
             onClick={() => setSelectedIds(new Set())}
-            className="ml-auto text-xs font-bold text-gray-400 hover:text-white transition-colors cursor-pointer"
+            className="text-xs font-bold text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
-            Cancelar
+            ✕
           </button>
         </div>
       )}
