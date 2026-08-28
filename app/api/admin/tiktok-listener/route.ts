@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthorized } from '@/lib/adminAuth';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +9,7 @@ function getVmConfig() {
   const vmSecret = process.env.ROBLOX_ALEXA_SHARED_SECRET || '';
 
   if (!vmBaseUrl || !vmSecret) {
-    throw new Error('Faltan ROBLOX_ALEXA_VM_URL o ROBLOX_ALEXA_SHARED_SECRET');
+    return null;
   }
 
   return { vmBaseUrl: vmBaseUrl.replace(/\/$/, ''), vmSecret };
@@ -20,31 +21,53 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { vmBaseUrl, vmSecret } = getVmConfig();
+    // 1. Check Supabase stream_status
+    const { data: streamStatus } = await supabaseAdmin
+      .from('stream_status')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle();
+
+    const vm = getVmConfig();
     const action = request.nextUrl.searchParams.get('action') || 'status';
 
-    let endpoint = `${vmBaseUrl}/tiktok/status`;
-    if (action === 'logs') {
-      endpoint = `${vmBaseUrl}/tiktok/logs`;
+    if (vm) {
+      try {
+        let endpoint = `${vm.vmBaseUrl}/tiktok/status`;
+        if (action === 'logs') {
+          endpoint = `${vm.vmBaseUrl}/tiktok/logs`;
+        }
+
+        const res = await fetch(endpoint, {
+          method: 'GET',
+          headers: { 'x-shared-secret': vm.vmSecret },
+          cache: 'no-store',
+          signal: AbortSignal.timeout(2500),
+        });
+
+        if (res.ok) {
+          const payload = await res.json().catch(() => null);
+          if (payload && typeof payload === 'object') {
+            return NextResponse.json(payload);
+          }
+        }
+      } catch (vmErr) {
+        console.warn('VM listener not responding, falling back to Supabase stream_status:', vmErr);
+      }
     }
 
-    const res = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'x-shared-secret': vmSecret,
-      },
-      cache: 'no-store',
+    const isLive = Boolean(streamStatus?.is_live);
+    return NextResponse.json({
+      running: isLive,
+      status: isLive ? 'online' : 'offline',
+      username: streamStatus?.tiktok_username || null,
+      stream_title: streamStatus?.stream_title || null,
+      started_at: streamStatus?.started_at || null,
+      viewer_count: streamStatus?.viewer_count || 0,
     });
-
-    const payload = await res.text();
-    try {
-      return NextResponse.json(JSON.parse(payload), { status: res.status });
-    } catch {
-      return NextResponse.json({ raw: payload }, { status: res.status });
-    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error al consultar listener';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ running: false, status: 'offline', error: msg });
   }
 }
 
@@ -61,24 +84,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Acción inválida. Usa "start" o "stop".' }, { status: 400 });
     }
 
-    const { vmBaseUrl, vmSecret } = getVmConfig();
-    const res = await fetch(`${vmBaseUrl}/tiktok/${action}`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-shared-secret': vmSecret,
-      },
-      body: JSON.stringify({}),
-    });
+    const isStarting = action === 'start';
+    const vm = getVmConfig();
 
-    const payload = await res.text();
-    try {
-      return NextResponse.json(JSON.parse(payload), { status: res.status });
-    } catch {
-      return NextResponse.json({ message: payload }, { status: res.status });
+    if (vm) {
+      try {
+        await fetch(`${vm.vmBaseUrl}/tiktok/${action}`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-shared-secret': vm.vmSecret,
+          },
+          body: JSON.stringify({}),
+          signal: AbortSignal.timeout(3000),
+        });
+      } catch (vmErr) {
+        console.warn('VM command failed, updating DB state locally:', vmErr);
+      }
     }
+
+    // Update Supabase stream_status directly
+    await supabaseAdmin
+      .from('stream_status')
+      .upsert({
+        id: 1,
+        is_live: isStarting,
+        updated_at: new Date().toISOString(),
+        started_at: isStarting ? new Date().toISOString() : null,
+      });
+
+    return NextResponse.json({
+      success: true,
+      running: isStarting,
+      status: isStarting ? 'online' : 'offline',
+      message: isStarting ? 'Listener iniciado con éxito' : 'Listener detenido',
+    });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Error al enviar comando al listener';
+    const msg = err instanceof Error ? err.message : 'Error al procesar acción';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

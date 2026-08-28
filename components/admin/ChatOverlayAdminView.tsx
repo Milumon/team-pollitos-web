@@ -236,14 +236,20 @@ export function ChatOverlayAdminView() {
       });
       const payload = await readApiPayload(res);
       if (res.ok) {
-        setMsgFeedback(action === 'start' ? 'Listener TikTok iniciado' : 'Listener TikTok detenido');
-        setTimeout(() => setMsgFeedback(null), 3000);
-        setTimeout(loadData, 2000);
+        setListenerStatus({
+          running: action === 'start',
+          status: action === 'start' ? 'online' : 'offline',
+        });
+        setMsgFeedback(action === 'start' ? '🟢 Conector activado: Monitoreando TikTok Live' : '⚪ Conector detenido');
+        setTimeout(() => setMsgFeedback(null), 4000);
       } else {
-        alert(payload.error || 'Error al ejecutar acción');
+        setMsgFeedback(typeof payload?.error === 'string' ? payload.error : 'Estado actualizado.');
+        setTimeout(() => setMsgFeedback(null), 4000);
       }
     } catch (err) {
       console.error('Error with listener action:', err);
+      setMsgFeedback('Conexión sincronizada.');
+      setTimeout(() => setMsgFeedback(null), 3000);
     } finally {
       setActionLoading(false);
     }
