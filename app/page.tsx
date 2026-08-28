@@ -259,7 +259,7 @@ export default function ComunidadPage() {
           const savedName = data.roblox_display_name?.replace(/^🐣\s*|\s*🐣$/g, '').trim();
           setIdentityDisplayName(data.identity_confirmed_at ? (savedName || suggestedName) : suggestedName);
           setIdentityTiktokUser(data.tiktok_user || '');
-          setIdentityMinecraftUsername(data.declared_minecraft_username || '');
+          setIdentityMinecraftUsername(data.declared_minecraft_username || data.roblox_user || '');
           setIdentityModalOpen(!data.identity_confirmed_at);
         }
         if (data.testimonial) {
@@ -1486,26 +1486,42 @@ export default function ComunidadPage() {
       </div>
 
       {identityModalOpen && session && statusInfo.status === 'approved' && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-[#090a0c]/75 p-4 backdrop-blur-sm">
-          <div className="my-6 w-full max-w-2xl rounded-3xl border-2 border-[#FFD500] bg-[#17191e] p-5 text-white shadow-[10px_10px_0_#FFD500] sm:p-8">
-            <div className="flex items-start justify-between gap-4">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-[#090a0c]/80 p-4 backdrop-blur-md">
+          <div className="my-6 w-full max-w-2xl rounded-3xl border-2 border-[#FFD500] bg-[#17191e] p-6 text-white shadow-[0_20px_60px_rgba(0,0,0,0.8),_0_0_40px_rgba(255,213,0,0.15)] sm:p-8">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
               <div>
-                <p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-[#FFD500]">Miembro Oficial</p>
-                <h2 className="mt-2 font-display text-3xl font-black tracking-tight sm:text-4xl">Confirma tu identidad</h2>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFD500]/15 text-[#FFD500] text-xs font-bold border border-[#FFD500]/30 uppercase tracking-wider">
+                  🐣 Tu Identidad Oficial
+                </span>
+                <h2 className="mt-2 font-display text-2xl sm:text-3xl font-black tracking-tight text-white">
+                  ¿Cómo te llamaremos en la comunidad?
+                </h2>
               </div>
-              <span className="text-4xl" aria-hidden="true">🐣</span>
+              <span className="text-4xl" aria-hidden="true">👑</span>
             </div>
-            <p className="mt-4 max-w-xl text-sm font-medium leading-relaxed text-gray-300">
-              Este será tu Nombre Oficial dentro de Team Pollito. Se mostrará en Roblox y Minecraft cuando tu cuenta esté vinculada.
-            </p>
-            {statusInfo.is_admin && statusInfo.roblox_user?.toLowerCase() === 'milumonrt' && (
-              <p className="mt-3 rounded-xl border border-[#FFD500]/25 bg-[#FFD500]/10 px-4 py-3 text-xs font-semibold leading-relaxed text-[#FFE98A]">
-                Como Administrador, tu nombre se guardará en Team Pollito y Minecraft. Roblox no intentará etiquetar tu propia cuenta.
-              </p>
-            )}
 
-            <form onSubmit={handleIdentitySubmit} className="mt-6 space-y-5">
-              <label className="block text-sm font-bold text-white">
+            <div className="mt-4 p-4 rounded-2xl bg-[#202328] border border-white/10 text-xs sm:text-sm text-gray-300 leading-relaxed space-y-2">
+              <p>
+                El nombre que elijas aquí será tu <strong className="text-[#FFD500]">Identidad Oficial</strong> en todo el Team Pollito:
+              </p>
+              <ul className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs">
+                <li className="p-2.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-[#FFD500] font-bold">🌐 En la Web</span>
+                  <span className="text-gray-400 mt-0.5">En tops y tu perfil</span>
+                </li>
+                <li className="p-2.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-emerald-400 font-bold">🎮 En los Juegos</span>
+                  <span className="text-gray-400 mt-0.5">En Roblox y Minecraft</span>
+                </li>
+                <li className="p-2.5 rounded-xl bg-black/40 border border-white/5 flex flex-col">
+                  <span className="text-amber-400 font-bold">🎙️ En los Directos</span>
+                  <span className="text-gray-400 mt-0.5">Así te llamará Milu</span>
+                </li>
+              </ul>
+            </div>
+
+            <form onSubmit={handleIdentitySubmit} className="mt-5 space-y-4">
+              <label className="block text-xs font-bold text-gray-200">
                 Nombre Oficial del Team
                 <input
                   value={identityDisplayName}
@@ -1515,73 +1531,104 @@ export default function ComunidadPage() {
                   pattern={MEMBER_DISPLAY_NAME_INPUT_PATTERN}
                   title="Usa letras, números, espacios y, como máximo, un guion bajo en posición intermedia."
                   required
-                  className="mt-2 w-full rounded-xl border border-white/15 bg-[#25282e] px-4 py-3 text-white outline-none placeholder:text-gray-500 focus:border-[#FFD500]"
+                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#25282e] px-4 py-3 text-white font-display font-bold outline-none placeholder:text-gray-500 focus:border-[#FFD500] text-base"
                   placeholder="Ejemplo: Pollito123"
                 />
-                <span className="mt-1 block text-xs font-medium text-gray-500">Usaremos 🐣 {identityDisplayName.trim() || 'TuUsuario'} 🐣</span>
+                <span className="mt-1 block text-[11px] font-medium text-[#FFD500]">
+                  Previsualización: 🐣 {identityDisplayName.trim() || 'TuUsuario'} 🐣
+                </span>
               </label>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-[#202328] p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#FFD500]">Roblox</p>
-                  <p className="mt-2 truncate font-black">🐣 {identityDisplayName.trim() || 'TuUsuario'} 🐣</p>
-                  <p className="mt-1 truncate text-xs text-gray-500">Cuenta: @{statusInfo.roblox_user}</p>
+              {/* Previsualización en plataformas */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-white/10 bg-[#202328] p-3.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#FFD500]">Roblox</p>
+                  <p className="mt-1 truncate font-display font-bold text-white text-sm">🐣 {identityDisplayName.trim() || 'TuUsuario'} 🐣</p>
+                  <p className="mt-0.5 truncate text-[11px] text-gray-400 font-mono">Cuenta: @{statusInfo.roblox_user}</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-[#202328] p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#FFD500]">Minecraft</p>
-                  <p className="mt-2 truncate font-black">🐣 {identityDisplayName.trim() || 'TuUsuario'} 🐣</p>
-                  <p className="mt-1 text-xs text-gray-500">Se usará cuando apruebes tu cuenta.</p>
+                <div className="rounded-xl border border-white/10 bg-[#202328] p-3.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Minecraft</p>
+                  <p className="mt-1 truncate font-display font-bold text-white text-sm">🐣 {identityDisplayName.trim() || 'TuUsuario'} 🐣</p>
+                  <p className="mt-0.5 truncate text-[11px] text-gray-400 font-mono">Nick: {identityMinecraftUsername.trim() || statusInfo.roblox_user}</p>
                 </div>
               </div>
 
-              <label className="block text-sm font-bold text-white">
+              {/* TikTok User */}
+              <label className="block text-xs font-bold text-gray-200">
                 Usuario de TikTok
-                <div className="mt-2 flex gap-2">
-                  <span className="flex items-center rounded-xl border border-white/15 bg-[#25282e] px-3 text-gray-400">@</span>
+                <div className="mt-1.5 flex gap-2">
+                  <span className="flex items-center rounded-xl border border-white/15 bg-[#25282e] px-3.5 text-gray-400 font-bold">@</span>
                   <input
                     value={identityTiktokUser}
                     onChange={(event) => setIdentityTiktokUser(event.target.value.replace(/^@/, ''))}
                     maxLength={24}
                     required
-                    className="min-w-0 flex-1 rounded-xl border border-white/15 bg-[#25282e] px-4 py-3 text-white outline-none placeholder:text-gray-500 focus:border-[#FFD500]"
+                    className="min-w-0 flex-1 rounded-xl border border-white/15 bg-[#25282e] px-4 py-2.5 text-white outline-none placeholder:text-gray-500 focus:border-[#FFD500] text-sm"
                     placeholder="tu_usuario"
                   />
-                  <a href={`https://www.tiktok.com/@${identityTiktokUser.replace(/^@/, '').trim()}`} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center rounded-xl border border-white/15 px-3 text-xs font-bold text-gray-300 transition hover:border-[#FFD500] hover:text-white">Ver perfil</a>
+                  <a
+                    href={`https://www.tiktok.com/@${identityTiktokUser.replace(/^@/, '').trim()}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex shrink-0 items-center rounded-xl border border-white/15 px-3 text-xs font-bold text-gray-300 transition hover:border-[#FFD500] hover:text-white"
+                  >
+                    Ver perfil
+                  </a>
                 </div>
               </label>
 
-              <label className="block text-sm font-bold text-white">
-                Usuario de Minecraft <span className="font-medium text-gray-500">(opcional)</span>
+              {/* Minecraft Username */}
+              <label className="block text-xs font-bold text-gray-200">
+                Usuario de Minecraft <span className="font-normal text-gray-400">(Java o Bedrock)</span>
                 <input
                   value={identityMinecraftUsername}
                   onChange={(event) => setIdentityMinecraftUsername(event.target.value)}
                   maxLength={32}
-                  className="mt-2 w-full rounded-xl border border-white/15 bg-[#25282e] px-4 py-3 text-white outline-none placeholder:text-gray-500 focus:border-[#FFD500]"
-                  placeholder="Ejemplo: Pollito123"
+                  className="mt-1.5 w-full rounded-xl border border-white/15 bg-[#25282e] px-4 py-2.5 text-white outline-none placeholder:text-gray-500 focus:border-[#FFD500] text-sm font-mono"
+                  placeholder="Ejemplo: TuNickMinecraft"
                 />
-                <span className="mt-1 block text-xs font-medium text-gray-500">Guardaremos este dato para precargar la vinculación. Todavía no es acceso al servidor.</span>
+                <span className="mt-1 block text-[11px] font-medium text-gray-400">
+                  Autollenado con tu nombre. Si en Minecraft usas otro nick, cámbialo aquí para preconfigurar tu vinculación.
+                </span>
               </label>
 
               {identityMinecraftUsername.trim() && (
-                <Link href={`/minecraft/link?username=${encodeURIComponent(identityMinecraftUsername.trim())}`} className="block rounded-xl border border-[#FFD500]/40 bg-[#FFD500]/10 px-4 py-3 text-sm font-bold text-[#FFD500] transition hover:bg-[#FFD500]/20">
-                  Después podrás vincular {identityMinecraftUsername.trim()} en Minecraft →
+                <Link
+                  href={`/minecraft/link?username=${encodeURIComponent(identityMinecraftUsername.trim())}`}
+                  className="block rounded-xl border border-[#FFD500]/40 bg-[#FFD500]/10 px-4 py-2.5 text-xs font-bold text-[#FFD500] transition hover:bg-[#FFD500]/20 text-center"
+                >
+                  🎮 Continuar a vincular {identityMinecraftUsername.trim()} en Minecraft →
                 </Link>
               )}
 
               {identityError && (
-                <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200">{identityError}</div>
+                <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-200">
+                  {identityError}
+                </div>
               )}
 
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button type="button" onClick={() => setIdentityModalOpen(false)} className="rounded-xl border border-white/15 px-5 py-3 text-sm font-bold text-gray-300 transition hover:bg-white/5">Ahora no</button>
-                <button type="submit" disabled={identitySaving} className="rounded-xl bg-[#FFD500] px-5 py-3 text-sm font-black text-black transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">{identitySaving ? 'Guardando...' : 'Confirmar mi identidad'}</button>
+              <div className="flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIdentityModalOpen(false)}
+                  className="rounded-xl border border-white/15 px-5 py-2.5 text-xs font-bold text-gray-300 transition hover:bg-white/5 cursor-pointer"
+                >
+                  Ahora no
+                </button>
+                <button
+                  type="submit"
+                  disabled={identitySaving}
+                  className="rounded-xl bg-[#FFD500] hover:brightness-105 px-6 py-2.5 text-xs font-display font-black text-black transition disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer shadow-md"
+                >
+                  {identitySaving ? 'Guardando...' : 'Confirmar mi identidad ✨'}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL DE REGLAS COMPLETAS */}
+            {/* MODAL DE REGLAS COMPLETAS */}
       {showRulesModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-[0_24px_80px_rgba(0,0,0,0.2)] relative">
