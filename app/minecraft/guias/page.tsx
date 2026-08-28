@@ -28,8 +28,8 @@ const commandGroups = [
     intro: 'Elige la edición que usas y sigue el wizard para vincular tu cuenta antes de entrar.',
     commands: [
       ['/link CODIGO', 'Confirmar la vinculación que empezaste en la web.'],
-      ['Java · mc.milumon.dev:25565', 'Computadora con Minecraft Java.'],
-      ['Bedrock · mc.milumon.dev:19132', 'Celular, consola o Minecraft Bedrock.'],
+      ['mc.milumon.dev', 'Dirección del servidor para Java y Bedrock (PC, móvil, consola).'],
+      ['Team Pollito', 'Nombre del servidor.'],
     ],
   },
   {
