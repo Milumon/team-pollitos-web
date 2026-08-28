@@ -87,6 +87,9 @@ export default function ChatOverlayPage() {
   const aspectContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const settingsRef = useRef<ChatSettings>(settings);
+  settingsRef.current = settings;
+
   const search = useSyncExternalStore(
     () => () => {},
     () => window.location.search,
@@ -94,25 +97,35 @@ export default function ChatOverlayPage() {
   );
   const params = new URLSearchParams(search);
   const isDebug = params.get('debug') === 'true';
-  const showPreview = params.get('preview') === 'true';
 
-  // 1. ResizeObserver for true 9:16 aspect scaling (matching main overlay)
+  // 1. ResizeObserver for true 9:16 aspect scaling (720x1280 base)
   useEffect(() => {
     const el = aspectContainerRef.current;
     if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      setCanvasFitScale(Math.min(height / CANVAS_H, width / CANVAS_W, 1));
-    });
-    observer.observe(el);
-    const { clientWidth: w, clientHeight: h } = el;
-    if (w > 0 && h > 0) {
-      setCanvasFitScale(Math.min(h / CANVAS_H, w / CANVAS_W, 1));
-    }
-    return () => observer.disconnect();
+
+    const updateScale = () => {
+      const parent = el.parentElement || document.documentElement;
+      const vw = parent.clientWidth || window.innerWidth;
+      const vh = parent.clientHeight || window.innerHeight;
+
+      const scaleW = vw / CANVAS_W;
+      const scaleH = vh / CANVAS_H;
+      const fit = Math.min(scaleW, scaleH);
+      setCanvasFitScale(fit > 0 ? fit : 1);
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(el.parentElement || document.body);
+    window.addEventListener('resize', updateScale);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateScale);
+    };
   }, []);
 
-  // 2. Load initial data & Realtime subscriptions
+  // 2. Load initial data & Realtime subscriptions + Polling Fallback
   useEffect(() => {
     let mounted = true;
 
@@ -128,7 +141,7 @@ export default function ChatOverlayPage() {
           setSettings(setts as ChatSettings);
         }
 
-        const max = setts?.chat_max_messages || 6;
+        const max = setts?.chat_max_messages || 8;
         const { data: initialComments } = await supabase
           .from('stream_comments')
           .select('*')
@@ -139,7 +152,6 @@ export default function ChatOverlayPage() {
           if (initialComments && initialComments.length > 0) {
             setComments((initialComments as StreamComment[]).reverse());
           } else {
-            // If DB has no comments yet, show sample comments so user sees overlay is active
             setComments(DEFAULT_SAMPLE_COMMENTS);
           }
         }
@@ -153,27 +165,25 @@ export default function ChatOverlayPage() {
 
     // Subscribe to Realtime comments
     const commentsChannel = supabase
-      .channel('overlay-chat-realtime-v2')
+      .channel('overlay-chat-realtime-live-v3')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'stream_comments' },
         (payload) => {
           const newComment = payload.new as StreamComment;
           setComments((prev) => {
-            // Remove samples if real comments start flowing
+            if (prev.some((c) => c.id === newComment.id)) return prev;
             const filtered = prev.filter((c) => !c.id.startsWith('sample-'));
-            const next = [...filtered, newComment];
-            return next.slice(-(settings.chat_max_messages || 8));
+            const max = settingsRef.current.chat_max_messages || 8;
+            return [...filtered, newComment].slice(-max);
           });
         }
       )
-      .subscribe((status) => {
-        console.log('[Chat Overlay] Realtime status:', status);
-      });
+      .subscribe();
 
     // Subscribe to Realtime settings
     const settingsChannel = supabase
-      .channel('overlay-chat-settings-realtime-v2')
+      .channel('overlay-chat-settings-live-v3')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'stream_chat_settings', filter: 'id=eq.1' },
@@ -185,12 +195,37 @@ export default function ChatOverlayPage() {
       )
       .subscribe();
 
+    // Fallback sync every 2.5s in case OBS webview throttles websocket
+    const pollInterval = setInterval(async () => {
+      if (!mounted) return;
+      try {
+        const max = settingsRef.current.chat_max_messages || 8;
+        const { data: latest } = await supabase
+          .from('stream_comments')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(max);
+
+        if (mounted && latest && latest.length > 0) {
+          const reversed = (latest as StreamComment[]).reverse();
+          setComments((prev) => {
+            const hasNew = reversed.some((r) => !prev.some((p) => p.id === r.id));
+            if (hasNew || prev.some((p) => p.id.startsWith('sample-'))) {
+              return reversed;
+            }
+            return prev;
+          });
+        }
+      } catch {}
+    }, 2500);
+
     return () => {
       mounted = false;
+      clearInterval(pollInterval);
       void supabase.removeChannel(commentsChannel);
       void supabase.removeChannel(settingsChannel);
     };
-  }, [settings.chat_max_messages]);
+  }, []);
 
   // 3. Auto-scroll chat container
   useEffect(() => {
@@ -199,12 +234,13 @@ export default function ChatOverlayPage() {
     }
   }, [comments]);
 
-  if (!settings.is_enabled && !isDebug && !showPreview) {
-    return <div className="w-screen h-screen bg-transparent pointer-events-none" />;
+  if (!settings.is_enabled) {
+    return null;
   }
 
-  // Filter messages based on settings
+  // Filter comments based on dynamic stream settings
   const filteredComments = comments.filter((c) => {
+    if (c.id.startsWith('sample-')) return true;
     if (settings.moderators_only && !c.is_moderator) return false;
     if (settings.subscribers_only && !c.is_subscriber) return false;
     if (settings.followers_only && !c.is_follower) return false;
@@ -212,111 +248,124 @@ export default function ChatOverlayPage() {
     return true;
   });
 
-  const getThemeClass = () => {
+  const visibleComments = filteredComments.slice(-settings.chat_max_messages);
+  const orderedComments =
+    settings.chat_direction === 'bottom-up' ? [...visibleComments].reverse() : visibleComments;
+
+  const getThemeStyle = () => {
     switch (settings.chat_theme) {
       case 'solid':
-        return 'bg-[#1e1f22] border border-neutral-700 text-white shadow-2xl';
+        return {
+          backgroundColor: `rgba(15, 17, 20, ${settings.chat_opacity})`,
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          color: '#ffffff',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+        };
       case 'neon':
-        return 'bg-black/90 border-2 border-[#FFC200] shadow-[0_0_20px_rgba(255,194,0,0.4)] text-yellow-100';
+        return {
+          backgroundColor: `rgba(10, 10, 15, ${settings.chat_opacity})`,
+          border: '2px solid #FFC200',
+          boxShadow: '0 0 16px rgba(255, 194, 0, 0.45)',
+          color: '#fffef0',
+        };
       case 'minimal':
-        return 'bg-black/60 text-white backdrop-blur-sm border-l-4 border-[#FFC200]';
+        return {
+          backgroundColor: `rgba(0, 0, 0, ${settings.chat_opacity * 0.7})`,
+          borderLeft: '4px solid #FFC200',
+          color: '#ffffff',
+        };
       case 'glassmorphism':
       default:
-        return 'bg-neutral-950/80 backdrop-blur-md border border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.6)] text-white';
+        return {
+          backgroundColor: `rgba(18, 20, 24, ${settings.chat_opacity})`,
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
+          color: '#ffffff',
+        };
     }
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-transparent select-none pointer-events-none font-sans flex items-center justify-center">
-      
-      {/* 9:16 Aspect Container matching OBS canvas exactly */}
+    <div
+      ref={aspectContainerRef}
+      className="fixed inset-0 overflow-hidden flex items-center justify-center pointer-events-none select-none"
+      style={{ backgroundColor: 'transparent' }}
+    >
+      {/* Native 720×1280 OBS Virtual Canvas Container */}
       <div
-        ref={aspectContainerRef}
-        className={`relative aspect-[9/16] h-full overflow-hidden ${
-          isDebug ? 'outline outline-4 outline-dashed outline-[#FFC200]/60 bg-black/20' : ''
-        }`}
-        style={{ background: 'transparent' }}
+        className="relative shrink-0 overflow-hidden"
+        style={{
+          width: `${CANVAS_W}px`,
+          height: `${CANVAS_H}px`,
+          transform: `scale(${canvasFitScale})`,
+          transformOrigin: 'center center',
+          backgroundColor: 'transparent',
+        }}
       >
+        {/* Debug Grid */}
+        {isDebug && (
+          <div className="absolute inset-0 border-2 border-dashed border-red-500/40 pointer-events-none flex flex-col justify-between p-3 text-red-400 font-mono text-xs">
+            <span>OBS Overlay Chat 720×1280 (Scale: {canvasFitScale.toFixed(2)})</span>
+            <span>Mensajes: {orderedComments.length}</span>
+          </div>
+        )}
+
+        {/* Dynamic Chat Overlay Box */}
         <div
-          className="absolute inset-0 flex items-center justify-center"
+          ref={containerRef}
+          className="absolute transition-all duration-200 overflow-hidden rounded-2xl flex flex-col pointer-events-none"
           style={{
-            width: `${CANVAS_W}px`,
-            height: `${CANVAS_H}px`,
-            left: '50%',
-            top: '50%',
-            transform: `translate(-50%, -50%) scale(${canvasFitScale})`,
-            transformOrigin: 'center center',
+            left: `${settings.chat_position_x}px`,
+            top: `${settings.chat_position_y}px`,
+            width: `${settings.chat_width}px`,
+            maxHeight: '600px',
+            fontSize: `${settings.chat_font_size}px`,
+            ...getThemeStyle(),
           }}
         >
-          {/* Chat Container Box placed at exact (X, Y) */}
-          <div
-            ref={containerRef}
-            style={{
-              position: 'absolute',
-              left: `${settings.chat_position_x}px`,
-              top: `${settings.chat_position_y}px`,
-              width: `${settings.chat_width}px`,
-              opacity: settings.chat_opacity,
-              fontSize: `${settings.chat_font_size}px`,
-            }}
-            className={`flex flex-col gap-2.5 transition-all duration-300 pointer-events-auto ${
-              settings.chat_direction === 'bottom-up' ? 'justify-end' : 'justify-start'
-            }`}
-          >
-            {filteredComments.map((item) => (
+          <div className="p-3.5 space-y-2.5 overflow-y-auto custom-scrollbar flex flex-col">
+            {orderedComments.map((comment) => (
               <div
-                key={item.id}
-                className={`p-3 rounded-2xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${getThemeClass()}`}
+                key={comment.id}
+                className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-0.5 leading-snug"
               >
-                {/* Header: Badges + Nickname */}
-                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                {/* Header: Badges & Name */}
+                <div className="flex items-center gap-1.5 flex-wrap">
                   {settings.show_badges && (
-                    <div className="flex items-center gap-1 text-[0.8em]">
-                      {item.is_moderator && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-blue-500/30 text-blue-300 font-bold border border-blue-400/40">
-                          🛡️ MOD
+                    <>
+                      {comment.is_moderator && (
+                        <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[9px] font-black uppercase">
+                          MOD
                         </span>
                       )}
-                      {item.is_subscriber && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-purple-500/30 text-purple-300 font-bold border border-purple-400/40">
-                          ⭐ SUB
+                      {comment.is_subscriber && (
+                        <span className="px-1.5 py-0.5 bg-[#FFC200]/20 text-[#FFC200] border border-[#FFC200]/30 rounded text-[9px] font-black uppercase">
+                          SUB
                         </span>
                       )}
-                      {item.team_member_level > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-amber-400/30 text-amber-300 font-bold border border-amber-400/40">
-                          🐣 Lv.{item.team_member_level}
+                      {comment.team_member_level > 0 && (
+                        <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-[9px] font-black">
+                          Nv.{comment.team_member_level}
                         </span>
                       )}
-                    </div>
+                    </>
                   )}
 
-                  <span className="font-display font-bold text-[#FFC200] drop-shadow-sm tracking-wide">
-                    {item.nickname}
-                  </span>
-                  <span className="text-white/40 text-[0.75em] font-mono">
-                    @{item.tiktok_user}
+                  <span className="font-display font-black text-[#FFC200] tracking-wide text-xs">
+                    {comment.nickname}
                   </span>
                 </div>
 
-                {/* Message Body */}
-                <div className="leading-snug break-words font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                  {item.message}
-                </div>
+                {/* Body Message */}
+                <p className="font-sans font-medium text-white/95 break-words drop-shadow-sm">
+                  {comment.message}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </div>
-
-      <style>{`
-        html, body {
-          background: transparent !important;
-          background-color: transparent !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          overflow: hidden !important;
-        }
-      `}</style>
     </div>
   );
 }
