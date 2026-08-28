@@ -11,7 +11,8 @@ const VALID_ACTIONS = [
   'set_rank',
   'soundboard_enable',
   'soundboard_disable',
-  'toggle_admin'
+  'toggle_admin',
+  'delete',
 ] as const;
 
 export async function POST(request: NextRequest) {
@@ -37,6 +38,45 @@ export async function POST(request: NextRequest) {
 
     if (!VALID_ACTIONS.includes(action)) {
       return NextResponse.json({ error: 'Acción no válida.' }, { status: 400 });
+    }
+
+    if (action === 'delete') {
+      // 1. Delete associated child records if needed
+      await supabaseAdmin.from('minecraft_link_requests').delete().in('user_id', userIds);
+      await supabaseAdmin.from('votes').delete().in('user_id', userIds);
+      await supabaseAdmin.from('sound_submissions').delete().in('user_id', userIds);
+      await supabaseAdmin.from('media_submissions').delete().in('user_id', userIds);
+
+      // 2. Delete from profiles
+      const { error: profileDeleteError } = await supabaseAdmin
+        .from('profiles')
+        .delete()
+        .in('id', userIds);
+
+      if (profileDeleteError) {
+        console.error('[POST /api/admin/users/bulk delete error]:', profileDeleteError.message);
+        return NextResponse.json({ error: profileDeleteError.message }, { status: 500 });
+      }
+
+      // 3. Best effort delete from auth.users
+      for (const uid of userIds) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(uid);
+        } catch {
+          // ignore if user auth record doesn't exist
+        }
+      }
+
+      await logAdminAction(adminEmail, `Eliminación de usuarios (${userIds.length})`, {
+        target_user_count: userIds.length,
+        target_user_ids: userIds,
+      });
+
+      return NextResponse.json({
+        success: true,
+        affected: userIds.length,
+        message: `${userIds.length} usuario(s) eliminado(s) permanentemente.`
+      });
     }
 
     const updates: Record<string, unknown> = {
