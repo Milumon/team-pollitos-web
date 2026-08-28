@@ -79,7 +79,6 @@ export default function MinecraftAdminView() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [temporaryReset, setTemporaryReset] = useState<TemporaryReset | null>(null);
-  const [activeTab, setActiveTab] = useState<'requests' | 'ranks'>('requests');
 
   const showToast = (msg: string) => {
     setSuccessMessage(msg);
@@ -99,7 +98,7 @@ export default function MinecraftAdminView() {
 
       const ranksPayload = await readApiPayload(ranksResponse);
       if (ranksResponse.ok) {
-        setProfiles((ranksPayload.profiles as Profile[]) ?? []);
+        setRankUsers((ranksPayload.users as UserRankProfile[]) ?? []);
       }
     } catch (loadError: unknown) {
       setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar las solicitudes.');
