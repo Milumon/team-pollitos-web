@@ -256,29 +256,20 @@ export function ChatOverlayAdminView() {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const sendTestComment = () => {
-    const testNicknames = ['Pollito VIP 💎', 'GamerPro 🎮', 'MiluFan 🐣', 'Moderador 🛡️', 'Alexis 🐔'];
-    const testMessages = [
-      '¡Hola a todos en el directo! 🐣🔥',
-      '¿Qué juego sigue hoy Milu?',
-      '¡Dejen su like y compartan el directo! ⭐',
-      '¡Que buena jugada en Minecraft! 👏',
-      '¡Un saludo a todo el Team Pollito!',
-    ];
-    const randIdx = Math.floor(Math.random() * testMessages.length);
-    const newSim: SimulatedComment = {
-      id: String(Date.now()),
-      user: `user_${Math.floor(Math.random() * 900 + 100)}`,
-      nickname: testNicknames[randIdx],
-      message: testMessages[randIdx],
-      level: Math.floor(Math.random() * 20 + 1),
-      isMod: randIdx === 3,
-      isSub: true,
-      isFollower: true,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setCommentsList((prev) => [newSim, ...prev.slice(0, 14)]);
+  const sendTestComment = async () => {
+    try {
+      const res = await adminFetch('/api/admin/chat-overlay/test-comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        setMsgFeedback('¡Comentario de prueba enviado en vivo a OBS!');
+        setTimeout(() => setMsgFeedback(null), 3000);
+      }
+    } catch (err) {
+      console.error('Error sending test comment:', err);
+    }
   };
 
   // Dragging logic with true 1:1 canvas coordinates

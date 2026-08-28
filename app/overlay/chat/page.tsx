@@ -17,6 +17,11 @@ type StreamComment = {
 };
 
 type ChatSettings = {
+  followers_only: boolean;
+  subscribers_only: boolean;
+  moderators_only: boolean;
+  min_team_member_level: number;
+  emoji_filter: string | null;
   chat_position_x: number;
   chat_position_y: number;
   chat_width: number;
@@ -30,10 +35,15 @@ type ChatSettings = {
 };
 
 const DEFAULT_SETTINGS: ChatSettings = {
+  followers_only: false,
+  subscribers_only: false,
+  moderators_only: false,
+  min_team_member_level: 0,
+  emoji_filter: null,
   chat_position_x: 20,
   chat_position_y: 400,
   chat_width: 380,
-  chat_max_messages: 12,
+  chat_max_messages: 8,
   chat_font_size: 15,
   chat_opacity: 0.88,
   chat_direction: 'bottom-up',
@@ -46,6 +56,12 @@ export default function ChatOverlayPage() {
   const [comments, setComments] = useState<StreamComment[]>([]);
   const [settings, setSettings] = useState<ChatSettings>(DEFAULT_SETTINGS);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Force transparent background for OBS browser source
+  useEffect(() => {
+    document.documentElement.style.background = 'transparent';
+    document.body.style.background = 'transparent';
+  }, []);
 
   // Load initial settings & comments
   useEffect(() => {
@@ -63,11 +79,12 @@ export default function ChatOverlayPage() {
           setSettings(setts as ChatSettings);
         }
 
+        const max = setts?.chat_max_messages || 8;
         const { data: initialComments } = await supabase
           .from('stream_comments')
           .select('*')
           .order('created_at', { ascending: false })
-          .limit(setts?.chat_max_messages || 12);
+          .limit(max);
 
         if (mounted && initialComments) {
           setComments((initialComments as StreamComment[]).reverse());
@@ -81,7 +98,7 @@ export default function ChatOverlayPage() {
 
     // Subscribe to Realtime comments
     const commentsChannel = supabase
-      .channel('overlay-comments')
+      .channel('overlay-comments-realtime')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'stream_comments' },
@@ -89,7 +106,7 @@ export default function ChatOverlayPage() {
           const newComment = payload.new as StreamComment;
           setComments((prev) => {
             const next = [...prev, newComment];
-            return next.slice(-(settings.chat_max_messages || 15));
+            return next.slice(-(settings.chat_max_messages || 8));
           });
         }
       )
@@ -97,7 +114,7 @@ export default function ChatOverlayPage() {
 
     // Subscribe to Realtime settings changes
     const settingsChannel = supabase
-      .channel('overlay-chat-settings')
+      .channel('overlay-chat-settings-realtime')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'stream_chat_settings', filter: 'id=eq.1' },
@@ -127,17 +144,26 @@ export default function ChatOverlayPage() {
     return <div className="w-screen h-screen bg-transparent pointer-events-none" />;
   }
 
+  // Filter messages
+  const filteredComments = comments.filter((c) => {
+    if (settings.moderators_only && !c.is_moderator) return false;
+    if (settings.subscribers_only && !c.is_subscriber) return false;
+    if (settings.followers_only && !c.is_follower) return false;
+    if (settings.min_team_member_level > 0 && c.team_member_level < settings.min_team_member_level) return false;
+    return true;
+  });
+
   const getThemeClass = () => {
     switch (settings.chat_theme) {
       case 'solid':
-        return 'bg-neutral-900 border border-neutral-700 text-white shadow-xl';
+        return 'bg-neutral-900 border border-neutral-700 text-white shadow-2xl';
       case 'neon':
-        return 'bg-black/90 border border-yellow-400/60 shadow-[0_0_15px_rgba(250,204,21,0.25)] text-yellow-100';
+        return 'bg-black/90 border-2 border-[#FFC200] shadow-[0_0_20px_rgba(255,194,0,0.35)] text-yellow-100';
       case 'minimal':
-        return 'bg-black/40 text-white backdrop-blur-xs border-l-2 border-yellow-400';
+        return 'bg-black/50 text-white backdrop-blur-sm border-l-4 border-[#FFC200]';
       case 'glassmorphism':
       default:
-        return 'bg-neutral-950/75 backdrop-blur-md border border-white/10 shadow-2xl text-white';
+        return 'bg-neutral-950/80 backdrop-blur-md border border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.6)] text-white';
     }
   };
 
@@ -157,39 +183,34 @@ export default function ChatOverlayPage() {
           settings.chat_direction === 'bottom-up' ? 'justify-end' : 'justify-start'
         }`}
       >
-        {comments.map((item) => (
+        {filteredComments.map((item) => (
           <div
             key={item.id}
-            className={`p-2.5 rounded-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${getThemeClass()}`}
+            className={`p-3 rounded-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${getThemeClass()}`}
           >
             {/* Header: Badges + Nickname */}
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
               {settings.show_badges && (
                 <div className="flex items-center gap-1 text-[0.8em]">
                   {item.is_moderator && (
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
+                    <span className="px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-300 font-bold border border-blue-400/40">
                       🛡️ MOD
                     </span>
                   )}
                   {item.is_subscriber && (
-                    <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40">
+                    <span className="px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300 font-bold border border-purple-400/40">
                       ⭐ SUB
                     </span>
                   )}
                   {item.team_member_level > 0 && (
-                    <span className="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-bold border border-yellow-500/40">
+                    <span className="px-1.5 py-0.5 rounded bg-amber-400/30 text-amber-300 font-bold border border-amber-400/40">
                       🐣 Lv.{item.team_member_level}
-                    </span>
-                  )}
-                  {item.is_follower && !item.is_subscriber && item.team_member_level === 0 && (
-                    <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-medium border border-sky-500/30">
-                      ✓ Follower
                     </span>
                   )}
                 </div>
               )}
 
-              <span className="font-bold text-yellow-300 drop-shadow-sm tracking-wide">
+              <span className="font-bold text-[#FFC200] drop-shadow-sm tracking-wide">
                 {item.nickname}
               </span>
               <span className="text-white/40 text-[0.75em]">
@@ -198,7 +219,7 @@ export default function ChatOverlayPage() {
             </div>
 
             {/* Message Body */}
-            <div className="leading-snug break-words text-white/95 font-normal drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            <div className="leading-snug break-words font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
               {item.message}
             </div>
           </div>
