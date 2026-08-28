@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   RefreshCw,
   Search,
   CheckCircle2,
   AlertCircle,
-  Link2,
   Unlink,
   Sparkles,
   ChevronDown,
@@ -16,9 +15,11 @@ import {
   Trophy,
   Users,
   Radio,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
+import { adminFetch, readApiPayload } from './adminApi';
 
 export type TikTokIdentityReview = {
   tiktok_id: string;
@@ -60,52 +61,103 @@ interface MemberOption {
   robloxAvatarUrl?: string | null;
 }
 
-interface TikTokOperationsViewProps {
-  operations: TikTokAdminOperations | null;
-  loading: boolean;
-  onRefresh: () => Promise<void>;
-  onLinkIdentity: (identity: TikTokIdentityReview, profileId: string | null, reason?: string) => Promise<void>;
-  onRollback: (batchId: string) => Promise<void>;
-  updatingIdentityId: string | null;
-  rollingBackBatchId: string | null;
-  members: MemberOption[];
-  formatDate: (val: string | null | undefined) => string;
+function formatDate(value: string | null | undefined): string {
+  if (!value) return 'Sin fecha';
+  try {
+    return new Intl.DateTimeFormat('es-ES', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
 }
 
-export function TikTokOperationsView({
-  operations,
-  loading,
-  onRefresh,
-  onLinkIdentity,
-  onRollback,
-  updatingIdentityId,
-  rollingBackBatchId,
-  members,
-  formatDate,
-}: TikTokOperationsViewProps) {
-  const [activeTab, setActiveTab] = useState<'unlinked' | 'linked' | 'all'>('unlinked');
+export function TikTokOperationsView() {
+  const [identities, setIdentities] = useState<TikTokIdentityReview[]>([]);
+  const [operations, setOperations] = useState<TikTokAdminOperations | null>(null);
+  const [members, setMembers] = useState<MemberOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [rollingBackId, setRollingBackId] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState<'linked' | 'unlinked' | 'all'>('linked');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const approvedMembers = useMemo(() => members, [members]);
+  // Load All Data
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setActionError(null);
+    try {
+      const [identitiesRes, opsRes, statsRes] = await Promise.all([
+        adminFetch('/api/admin/tiktok/identities?limit=500'),
+        adminFetch('/api/admin/tiktok/rankings'),
+        adminFetch('/api/admin/stats'),
+      ]);
 
+      const [identitiesData, opsData, statsData] = await Promise.all([
+        readApiPayload(identitiesRes),
+        readApiPayload(opsRes),
+        readApiPayload(statsRes),
+      ]);
+
+      if (identitiesData?.identities) {
+        setIdentities(identitiesData.identities as TikTokIdentityReview[]);
+      }
+      if (opsData) {
+        setOperations(opsData as TikTokAdminOperations);
+      }
+      if (statsData?.users) {
+        const approved = (statsData.users as Array<{ id: string; email: string; linkStatus: string; robloxUser?: string; robloxDisplayName?: string; robloxAvatarUrl?: string }>)
+          .filter((u) => u.linkStatus === 'approved')
+          .map((u) => ({
+            id: u.id,
+            email: u.email,
+            robloxUser: u.robloxUser,
+            robloxDisplayName: u.robloxDisplayName,
+            robloxAvatarUrl: u.robloxAvatarUrl,
+          }));
+        setMembers(approved);
+      }
+    } catch (err) {
+      console.error('[TikTokOperationsView error]:', err);
+      setActionError(err instanceof Error ? err.message : 'Error al cargar operaciones');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  // Member Lookup Map
   const memberMap = useMemo(() => {
     const map = new Map<string, MemberOption>();
-    for (const m of approvedMembers) {
+    for (const m of members) {
       map.set(m.id, m);
     }
     return map;
-  }, [approvedMembers]);
+  }, [members]);
 
-  const identities = operations?.identities ?? [];
+  // Counts
+  const counts = useMemo(() => {
+    const total = identities.length;
+    const linked = identities.filter((i) => i.status === 'linked' || Boolean(i.linked_profile_id)).length;
+    const unlinked = total - linked;
+    return { total, linked, unlinked };
+  }, [identities]);
 
   // Filter & Search
   const filteredIdentities = useMemo(() => {
     let result = identities;
-    if (activeTab === 'unlinked') {
-      result = result.filter((i) => i.status !== 'linked' && !i.linked_profile_id);
-    } else if (activeTab === 'linked') {
+    if (activeTab === 'linked') {
       result = result.filter((i) => i.status === 'linked' || Boolean(i.linked_profile_id));
+    } else if (activeTab === 'unlinked') {
+      result = result.filter((i) => i.status !== 'linked' && !i.linked_profile_id);
     }
 
     const needle = searchTerm.trim().toLowerCase();
@@ -117,17 +169,78 @@ export function TikTokOperationsView({
         i.display_id.toLowerCase().includes(needle) ||
         (i.nickname && i.nickname.toLowerCase().includes(needle)) ||
         (linked?.robloxUser && linked.robloxUser.toLowerCase().includes(needle)) ||
-        (linked?.robloxDisplayName && linked.robloxDisplayName.toLowerCase().includes(needle))
+        (linked?.robloxDisplayName && linked.robloxDisplayName.toLowerCase().includes(needle)) ||
+        (linked?.email && linked.email.toLowerCase().includes(needle))
       );
     });
   }, [identities, activeTab, searchTerm, memberMap]);
 
-  const counts = useMemo(() => {
-    const total = identities.length;
-    const linked = identities.filter((i) => i.status === 'linked' || Boolean(i.linked_profile_id)).length;
-    const unlinked = total - linked;
-    return { total, linked, unlinked };
-  }, [identities]);
+  // Link / Unlink Action
+  const handleLinkIdentity = async (identity: TikTokIdentityReview, profileId: string | null, reason = 'Actualización en panel') => {
+    setUpdatingId(identity.tiktok_id);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const res = await adminFetch('/api/admin/tiktok/identities', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          tiktok_id: identity.tiktok_id,
+          profile_id: profileId,
+          reason,
+        }),
+      });
+      const data = await readApiPayload(res);
+      if (!res.ok) throw new Error(String(data.error || 'No se pudo actualizar el vínculo'));
+
+      // Optimistic update
+      setIdentities((prev) =>
+        prev.map((i) => {
+          if (i.tiktok_id === identity.tiktok_id) {
+            return {
+              ...i,
+              linked_profile_id: profileId,
+              status: profileId ? 'linked' : 'unlinked',
+            };
+          }
+          return i;
+        })
+      );
+
+      const targetMember = profileId ? memberMap.get(profileId) : null;
+      setActionSuccess(
+        profileId && targetMember
+          ? `Vínculo guardado: @${identity.display_id} emparejado con @${targetMember.robloxUser || targetMember.robloxDisplayName}`
+          : `Vínculo removido para @${identity.display_id}`
+      );
+      setTimeout(() => setActionSuccess(null), 3500);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Error al vincular identidad');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // Rollback Action
+  const handleRollback = async (batchId: string) => {
+    const reason = window.prompt('Motivo de la reactivación/rollback del snapshot:');
+    if (!reason || reason.trim().length < 3) return;
+    setRollingBackId(batchId);
+    try {
+      const res = await adminFetch('/api/admin/tiktok/rankings', {
+        method: 'POST',
+        body: JSON.stringify({ batch_id: batchId, reason }),
+      });
+      const data = await readApiPayload(res);
+      if (!res.ok) throw new Error(String(data.error || 'No se pudo reactivar el snapshot'));
+      await loadData();
+      setActionSuccess('Snapshot reactivado correctamente');
+      setTimeout(() => setActionSuccess(null), 3500);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Error en rollback');
+    } finally {
+      setRollingBackId(null);
+    }
+  };
 
   const latest = operations?.latest_import;
 
@@ -156,7 +269,7 @@ export function TikTokOperationsView({
 
           <button
             type="button"
-            onClick={() => void onRefresh()}
+            onClick={() => void loadData()}
             disabled={loading}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#FFC200] text-black font-bold text-xs rounded-xl hover:brightness-105 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
           >
@@ -165,6 +278,20 @@ export function TikTokOperationsView({
           </button>
         </div>
       </div>
+
+      {/* Notifications */}
+      {actionSuccess && (
+        <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{actionSuccess}</span>
+        </div>
+      )}
+      {actionError && (
+        <div className="p-3.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{actionError}</span>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
@@ -202,11 +329,8 @@ export function TikTokOperationsView({
             />
           </div>
           <p className="text-[10px] text-gray-400">
-            {counts.unlinked > 0 ? (
-              <span className="text-amber-400 font-semibold">{counts.unlinked} identidades pendientes por vincular</span>
-            ) : (
-              <span className="text-emerald-400 font-semibold">Todas las identidades están al día</span>
-            )}
+            <span className="text-emerald-400 font-bold">{counts.linked} miembros vinculados</span>
+            {counts.unlinked > 0 && <span className="text-gray-500"> · {counts.unlinked} pendientes</span>}
           </p>
         </div>
 
@@ -258,17 +382,6 @@ export function TikTokOperationsView({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setActiveTab('unlinked')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'unlinked'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
-                : 'bg-[#1e1f22] text-gray-400 hover:text-white'
-            }`}
-          >
-            ⚠️ Por Vincular ({counts.unlinked})
-          </button>
-          <button
-            type="button"
             onClick={() => setActiveTab('linked')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'linked'
@@ -277,6 +390,17 @@ export function TikTokOperationsView({
             }`}
           >
             ✅ Vinculados ({counts.linked})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('unlinked')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'unlinked'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                : 'bg-[#1e1f22] text-gray-400 hover:text-white'
+            }`}
+          >
+            ⚠️ Por Vincular ({counts.unlinked})
           </button>
           <button
             type="button"
@@ -292,7 +416,11 @@ export function TikTokOperationsView({
         </div>
 
         {/* List of Identities */}
-        {filteredIdentities.length === 0 ? (
+        {loading ? (
+          <div className="py-16 text-center text-xs font-bold uppercase tracking-wider text-gray-500 animate-pulse flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-[#FFC200]" /> Cargando identidades y vínculos...
+          </div>
+        ) : filteredIdentities.length === 0 ? (
           <div className="py-12 text-center bg-[#1e1f22] border border-dashed border-neutral-700/60 rounded-2xl p-6">
             <p className="text-white font-bold text-sm">
               {activeTab === 'unlinked' ? '¡Todo al día! No hay identidades pendientes.' : 'No se encontraron identidades.'}
@@ -306,7 +434,7 @@ export function TikTokOperationsView({
         ) : (
           <div className="space-y-3">
             {filteredIdentities.map((identity) => {
-              const isUpdating = updatingIdentityId === identity.tiktok_id;
+              const isUpdating = updatingId === identity.tiktok_id;
               const linkedMember = identity.linked_profile_id ? memberMap.get(identity.linked_profile_id) : null;
               const isLinked = Boolean(identity.linked_profile_id);
 
@@ -314,7 +442,7 @@ export function TikTokOperationsView({
                 <div
                   key={identity.tiktok_id}
                   className={`bg-[#1e1f22] border rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all ${
-                    isLinked ? 'border-neutral-700/40' : 'border-amber-500/30 bg-amber-500/[0.02]'
+                    isLinked ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-neutral-700/40'
                   }`}
                 >
                   {/* Left: TikTok Account Info */}
@@ -356,7 +484,7 @@ export function TikTokOperationsView({
                               key={cand.id}
                               type="button"
                               disabled={isUpdating}
-                              onClick={() => void onLinkIdentity(identity, cand.id, 'Auto-match sugerencia de sistema')}
+                              onClick={() => void handleLinkIdentity(identity, cand.id, 'Auto-match sugerencia de sistema')}
                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 text-[10px] font-bold transition-all disabled:opacity-50 cursor-pointer"
                             >
                               ✨ Vincular con @{cand.roblox_user || cand.name}
@@ -378,7 +506,7 @@ export function TikTokOperationsView({
                         onChange={(e) => {
                           const val = e.target.value;
                           if (val) {
-                            void onLinkIdentity(identity, val, 'Asignación manual en panel');
+                            void handleLinkIdentity(identity, val, 'Asignación manual en panel');
                           }
                         }}
                         className={`w-full sm:w-64 bg-[#2b2d31] border rounded-xl px-3 py-2 text-xs font-bold transition-colors cursor-pointer outline-none focus:border-[#FFC200] ${
@@ -390,7 +518,7 @@ export function TikTokOperationsView({
                         <option value="" disabled={isLinked} className="bg-[#2b2d31] text-gray-400">
                           {isLinked ? 'Cambiar vinculación...' : '🔍 Seleccionar Miembro Oficial...'}
                         </option>
-                        {approvedMembers.map((member) => (
+                        {members.map((member) => (
                           <option key={member.id} value={member.id} className="bg-[#2b2d31] text-white">
                             {member.robloxDisplayName || member.robloxUser || member.email}
                             {member.robloxUser ? ` (@${member.robloxUser})` : ''}
@@ -404,7 +532,7 @@ export function TikTokOperationsView({
                       <button
                         type="button"
                         disabled={isUpdating}
-                        onClick={() => void onLinkIdentity(identity, null, 'Desvinculado manualmente')}
+                        onClick={() => void handleLinkIdentity(identity, null, 'Desvinculado manualmente')}
                         className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
                         title="Quitar vínculo con este miembro"
                       >
@@ -414,7 +542,7 @@ export function TikTokOperationsView({
                       <button
                         type="button"
                         disabled={isUpdating}
-                        onClick={() => void onLinkIdentity(identity, null, 'No es miembro oficial')}
+                        onClick={() => void handleLinkIdentity(identity, null, 'No es miembro oficial')}
                         className="px-3 py-2 rounded-xl bg-[#2b2d31] border border-neutral-700/60 text-gray-400 hover:text-white text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer"
                         title="Marcar como participante externo (sin vincular)"
                       >
@@ -469,7 +597,7 @@ export function TikTokOperationsView({
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
                   {(operations?.history ?? []).map((snapshot) => {
                     const isActive = snapshot.batch_id === operations?.active_batch?.batch_id;
-                    const isRollingBack = rollingBackBatchId === snapshot.batch_id;
+                    const isRollingBack = rollingBackId === snapshot.batch_id;
 
                     return (
                       <div
@@ -492,7 +620,7 @@ export function TikTokOperationsView({
                           <button
                             type="button"
                             disabled={isRollingBack}
-                            onClick={() => void onRollback(snapshot.batch_id)}
+                            onClick={() => void handleRollback(snapshot.batch_id)}
                             className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 font-bold text-xs transition-colors shrink-0 disabled:opacity-40 cursor-pointer"
                           >
                             {isRollingBack ? 'Reactivando...' : 'Reactivar este snapshot'}

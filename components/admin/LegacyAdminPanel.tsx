@@ -3519,23 +3519,7 @@ export default function LegacyAdminPanel({
   );
 
   const renderTiktokOperations = () => (
-    <TikTokOperationsView
-      operations={tiktokOperations}
-      loading={loadingTiktokOperations}
-      onRefresh={loadTiktokOperations}
-      onLinkIdentity={handleTiktokIdentityLink}
-      onRollback={handleTiktokRollback}
-      updatingIdentityId={updatingTiktokIdentity}
-      rollingBackBatchId={rollingBackTiktok}
-      members={(stats?.users ?? []).filter((u) => u.linkStatus === 'approved').map((u) => ({
-        id: u.id,
-        email: u.email,
-        robloxUser: u.robloxUser,
-        robloxDisplayName: u.robloxDisplayName,
-        robloxAvatarUrl: u.robloxAvatarUrl,
-      }))}
-      formatDate={(val) => val ? formatDate(val) : 'Sin fecha'}
-    />
+    <TikTokOperationsView />
   );
 
   const renderActiveTabContent = () => {
