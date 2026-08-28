@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     // Enrich with owner profiles
     const ownerIds = [...new Set((sounds || []).map((s: { owner_user_id: string | null }) => s.owner_user_id).filter(Boolean))] as string[];
-    let ownerMap: Record<string, { roblox_user: string | null; roblox_display_name: string | null; roblox_avatar_url: string | null }> = {};
+    const ownerMap: Record<string, { roblox_user: string | null; roblox_display_name: string | null; roblox_avatar_url: string | null }> = {};
     if (ownerIds.length > 0) {
       const { data: owners } = await supabaseAdmin
         .from('profiles')

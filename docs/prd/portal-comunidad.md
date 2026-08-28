@@ -37,7 +37,7 @@ Desarrollar un Portal de Comunidad consolidado en un único repositorio Next.js 
 
 ### Modules & Architecture
 
-- **Single Next.js codebase (team-pollito-awards)**: React 19, TailwindCSS v4, App Router, TypeScript.
+- **Single Next.js codebase (team-pollitos-web)**: React 19, TailwindCSS v4, App Router, TypeScript.
 - **PWA Configuration**: Use `@ducanh2912/next-pwa` to enable installation on Android/iOS, configure `manifest.json`, and set up caching for soundboard MP3 files and fonts to ensure fast loading times.
 - **API routes**:
   - `/api/profile/link`: Processes Google Auth profiles and creates pending link records for `roblox_username` and `tiktok_username`.

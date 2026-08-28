@@ -1,6 +1,6 @@
 # Unificación del Portal de Comunidad en un único repositorio
 
-Decidimos migrar y unificar los proyectos `team-pollito-entrevistas` y `team-pollito-awards` en un solo repositorio Next.js y bajo una única base de datos Supabase. Esta consolidación permite centralizar la autenticación de usuarios de Google, verificar las cuentas de Roblox en un solo lugar y sincronizar eventos de sonido/TTS en tiempo real para el vivo de TikTok de forma directa y económica.
+Decidimos migrar y unificar los proyectos `team-pollito-entrevistas` y `team-pollitos-web` en un solo repositorio Next.js y bajo una única base de datos Supabase. Esta consolidación permite centralizar la autenticación de usuarios de Google, verificar las cuentas de Roblox en un solo lugar y sincronizar eventos de sonido/TTS en tiempo real para el vivo de TikTok de forma directa y económica.
 
 ## Considered Options
 

@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { createElement } from "react";
 import fs from "fs";
 import path from "path";
 
@@ -35,17 +36,15 @@ export function createSocialImage() {
           background: "#111111", // Fondo de respaldo
         }}
       >
-        {imgSrc && (
-          <img
-            src={imgSrc}
-            alt={alt}
-            style={{
+        {imgSrc && createElement("img", {
+            src: imgSrc,
+            alt,
+            style: {
               width: "100%",
               height: "100%",
               objectFit: "cover",
-            }}
-          />
-        )}
+            },
+          })}
       </div>
     ),
     {

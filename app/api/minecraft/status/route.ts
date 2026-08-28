@@ -47,7 +47,12 @@ async function resolveOnlinePlayers(playerNames: string[]): Promise<OnlinePlayer
 
   const normalizeMinecraftName = (name: string) => name.trim().replace(/^\./, '').toLocaleLowerCase();
   const onlineNames = new Set(playerNames.map(normalizeMinecraftName));
-  const onlineAccounts = ((accounts ?? []) as MinecraftAccount[]).filter((account) => onlineNames.has(normalizeMinecraftName(account.username)));
+  const onlineAccounts = ((accounts ?? []) as MinecraftAccount[]).filter((account) => playerNames.some((playerName) => {
+    const isBedrockPlayer = playerName.trim().startsWith('.');
+    return isBedrockPlayer === (account.edition === 'bedrock')
+      && onlineNames.has(normalizeMinecraftName(account.username))
+      && normalizeMinecraftName(playerName) === normalizeMinecraftName(account.username);
+  }));
   const userIds = [...new Set(onlineAccounts.map((account) => account.user_id))];
   if (userIds.length === 0) {
     return playerNames.map((name) => {
@@ -77,9 +82,12 @@ async function resolveOnlinePlayers(playerNames: string[]): Promise<OnlinePlayer
     };
   });
 
-  const matchedNames = new Set(onlineAccounts.map((account) => normalizeMinecraftName(account.username)));
+  const matchedNames = new Set(onlineAccounts.map((account) => `${account.edition}:${normalizeMinecraftName(account.username)}`));
   const fallbackPlayers = playerNames
-    .filter((name) => !matchedNames.has(normalizeMinecraftName(name)))
+    .filter((name) => {
+      const edition = name.trim().startsWith('.') ? 'bedrock' : 'java';
+      return !matchedNames.has(`${edition}:${normalizeMinecraftName(name)}`);
+    })
     .map((name) => {
       const username = name.trim().replace(/^\./, '');
       return name.trim().startsWith('.')

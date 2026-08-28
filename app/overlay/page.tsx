@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { OverlayCanvas, CANVAS_W, CANVAS_H, type OverlayParticle, type OverlayAnimationType } from '@/components/OverlayCanvas';
@@ -68,19 +68,17 @@ export default function ObsOverlayPage() {
   const [settings, setSettings] = useState<StreamSettings | null>(null);
   const [soundsMap, setSoundsMap] = useState<Record<string, { url: string; name: string }>>({});
   const [needsInteraction, setNeedsInteraction] = useState(false);
-  const [isDebug, setIsDebug] = useState(false);
-  const [soundVolume, setSoundVolume] = useState(1);
+  const search = useSyncExternalStore(
+    () => () => {},
+    () => window.location.search,
+    () => '',
+  );
+  const params = new URLSearchParams(search);
+  const isDebug = params.get('debug') === 'true';
+  const volumeParam = parseFloat(params.get('volume') ?? '1');
+  const soundVolume = Number.isNaN(volumeParam) ? 1 : Math.max(0, Math.min(1, volumeParam));
   const [canvasFitScale, setCanvasFitScale] = useState(1);
   const aspectContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      setIsDebug(params.get('debug') === 'true');
-      const vol = parseFloat(params.get('volume') ?? '1');
-      if (!isNaN(vol)) setSoundVolume(Math.max(0, Math.min(1, vol)));
-    }
-  }, []);
 
   useEffect(() => {
     const el = aspectContainerRef.current;
@@ -108,7 +106,7 @@ export default function ObsOverlayPage() {
 
   // Image repositioning state
   const [imagePositionIndex, setImagePositionIndex] = useState(0);
-  const imagePositionsRef = useRef<Array<{ x: number; y: number }>>([]);
+  const [imagePositions, setImagePositions] = useState<Array<{ x: number; y: number }>>([]);
   const imageRepositionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const queueRef = useRef<StreamEvent[]>([]);
@@ -206,7 +204,7 @@ export default function ObsOverlayPage() {
 
     if (nextEvent.type === 'sound') {
       const cleanKey = nextEvent.content.replace('.mp3', '');
-      let soundData = soundsMap[cleanKey];
+      const soundData = soundsMap[cleanKey];
       let audioUrl = soundData ? soundData.url : `/sounds/${nextEvent.content}`;
 
       // Si el sonido no está en el mapa (puede ser privado), resolverlo por ID
@@ -378,7 +376,7 @@ export default function ObsOverlayPage() {
     } else if (nextEvent.type === 'audio') {
       // Audio-only: content is the sound ID, resolve URL from soundsMap or fetch
       const cleanKey = nextEvent.content.replace('.mp3', '');
-      let soundData = soundsMap[cleanKey];
+      const soundData = soundsMap[cleanKey];
       let audioUrl = soundData ? soundData.url : nextEvent.audio_url || `/sounds/${nextEvent.content}`;
 
       if (!soundData && !nextEvent.audio_url && token) {
@@ -439,7 +437,7 @@ export default function ObsOverlayPage() {
         for (let i = 0; i < positionCount; i++) {
           positions.push(generateRandomPosition(mediaWidth));
         }
-        imagePositionsRef.current = positions;
+        setImagePositions(positions);
         setImagePositionIndex(0);
 
         remoteLog('INFO', `[IMAGE] url=${nextEvent.image_url}, duration=${durationMs}ms, tts=${hasMessage}, positions=${positionCount}`);
@@ -530,7 +528,7 @@ export default function ObsOverlayPage() {
         playNextRef.current();
       }, 5500);
     }
-  }, [markEventAsPlayed, soundsMap]);
+  }, [generateRandomPosition, markEventAsPlayed, soundVolume, soundsMap, token]);
 
   useEffect(() => {
     playNextRef.current = playNext;
@@ -901,7 +899,7 @@ export default function ObsOverlayPage() {
               }
               setTimeout(() => { playNextRef.current(); }, 100);
             }}
-            mediaPosition={currentEvent?.type === 'image' && imagePositionsRef.current.length > 0 ? imagePositionsRef.current[imagePositionIndex] : undefined}
+            mediaPosition={currentEvent?.type === 'image' && imagePositions.length > 0 ? imagePositions[imagePositionIndex] : undefined}
           />
         </div>
       </div>

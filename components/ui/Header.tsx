@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
             {[
               { key: 'inicio', label: 'Inicio' },
               { key: 'beneficios', label: 'Beneficios' },
-              { key: 'stats-evento', label: 'Eventos' },
+              { key: 'rankings', label: 'Rankings' },
             ].map(({ key, label }) => (
               <button
                 key={key}

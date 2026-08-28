@@ -2,7 +2,7 @@
 
 Implementa exclusivamente el issue #{{TASK_ID}}: {{ISSUE_TITLE}} en la rama `{{BRANCH}}`.
 
-Lee el issue completo con `gh issue view {{TASK_ID}} --repo Milumon/team-pollito-awards --comments` y su PRD padre en el mismo repositorio. Lee también `AGENTS.md`, `CONTEXT.md`, los ADR relevantes y la documentación incluida en la versión instalada de Next.js antes de modificar código del framework.
+Lee el issue completo con `gh issue view {{TASK_ID}} --repo Milumon/team-pollitos-web --comments` y su PRD padre en el mismo repositorio. Lee también `AGENTS.md`, `CONTEXT.md`, los ADR relevantes y la documentación incluida en la versión instalada de Next.js antes de modificar código del framework.
 
 El worktree puede contener cambios sin commit de un intento anterior de Sandcastle para este mismo issue. Inspecciónalos y continúa únicamente los que coincidan con sus criterios de aceptación; no los trates como trabajo ajeno ni reviertas cambios no relacionados.
 

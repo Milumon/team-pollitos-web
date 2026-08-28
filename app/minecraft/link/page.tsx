@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 export default async function MinecraftLinkPage() {
   const session = await getServerSession();
   if (!session) redirect('/acceso?returnTo=/minecraft/link');
+  if (session.linkStatus !== 'approved') redirect('/?minecraft=approval-required');
 
   return <MinecraftLinkForm />;
 }

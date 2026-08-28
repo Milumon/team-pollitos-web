@@ -57,7 +57,9 @@ export default function MinecraftLinkForm() {
         setAccounts(accounts);
         setAccount(current);
         if (formHasChanges.current) return;
+        const declaredUsername = new URLSearchParams(window.location.search).get('username')?.trim() || '';
         if (!formHasChanges.current && current?.username) setUsername(current.username);
+        if (!formHasChanges.current && !current?.username && declaredUsername) setUsername(declaredUsername);
         if (!formHasChanges.current && current?.edition) setEdition(current.edition);
         if (current?.code && !isVerified(current)) {
           setCode(current.code);
@@ -80,7 +82,7 @@ export default function MinecraftLinkForm() {
           setMessage(null);
         }
       } catch (error: unknown) {
-        if (active && !account) setMessage(error instanceof Error ? error.message : 'No se pudo cargar la vinculación.');
+        if (active) setMessage(error instanceof Error ? error.message : 'No se pudo cargar la vinculación.');
       } finally {
         if (active) setLoading(false);
       }

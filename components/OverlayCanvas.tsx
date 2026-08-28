@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React from 'react';
+import Image from 'next/image';
 import { NotificationPopup } from '@/components/overlay/NotificationPopup';
 
 // ─── Tipos públicos ─────────────────────────────────────────────────────────
@@ -57,6 +58,11 @@ export type OverlayAnimationType = 'confetti' | 'eggs' | 'sparkles' | null;
  */
 export const CANVAS_W = 720;
 export const CANVAS_H = 1280;
+
+function seededRandom(seed: number) {
+  const value = Math.sin(seed) * 10000;
+  return value - Math.floor(value);
+}
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -155,6 +161,9 @@ export function OverlayCanvas({
   const { randomPos, repeatPositions } = React.useMemo(() => {
     if (!event) return { randomPos: { x: mediaLeft, y: mediaTop }, repeatPositions: [] };
 
+    let randomSeed = Array.from(event.id).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    const nextRandom = () => seededRandom(randomSeed++);
+
     const effectiveWidth = Math.min(mediaWidth, CANVAS_W * 0.9);
     const maxXPercent = ((CANVAS_W - effectiveWidth) / CANVAS_W) * 100;
 
@@ -164,7 +173,7 @@ export function OverlayCanvas({
 
     const shouldRandomize = settings.overlay_random_position || (event.repeat_enabled && repeatCount > 1);
     const basePos = shouldRandomize
-      ? { x: Math.random() * maxXPercent, y: minY + Math.random() * (maxY - minY) }
+      ? { x: nextRandom() * maxXPercent, y: minY + nextRandom() * (maxY - minY) }
       : { x: mediaLeft, y: mediaTop };
 
     if (event.repeat_enabled && repeatCount > 1) {
@@ -185,8 +194,8 @@ export function OverlayCanvas({
         const cx = col * cellWidth + cellWidth / 2;
         const cy = row * cellHeight + cellHeight / 2;
         positions.push({
-          x: Math.max(0, Math.min(maxXPercent, cx + (Math.random() * 2 - 1) * jitterX)),
-          y: Math.max(minY, Math.min(maxY, cy + (Math.random() * 2 - 1) * jitterY)),
+          x: Math.max(0, Math.min(maxXPercent, cx + (nextRandom() * 2 - 1) * jitterX)),
+          y: Math.max(minY, Math.min(maxY, cy + (nextRandom() * 2 - 1) * jitterY)),
         });
       }
       return { randomPos: basePos, repeatPositions: positions };
@@ -308,7 +317,7 @@ export function OverlayCanvas({
               >
                 <div className="relative overflow-hidden rounded-lg shadow-lg">
                   {event.type === 'image_audio' && event.image_url && (
-                    <img src={event.image_url} alt={event.content} className="w-full object-contain max-h-[50vh] rounded-lg" />
+                    <Image src={event.image_url} alt={event.content} width={800} height={600} unoptimized className="w-full object-contain max-h-[50vh] rounded-lg" />
                   )}
                   {event.type === 'video' && event.video_url && (
                     <video src={event.video_url} autoPlay loop={false} playsInline muted={false} className="w-full object-contain max-h-[50vh] rounded-lg"
@@ -317,7 +326,7 @@ export function OverlayCanvas({
                     />
                   )}
                   {event.type === 'image' && event.image_url && (
-                    <img src={event.image_url} alt={event.content} className="w-full object-contain max-h-[50vh] rounded-lg" />
+                    <Image src={event.image_url} alt={event.content} width={800} height={600} unoptimized className="w-full object-contain max-h-[50vh] rounded-lg" />
                   )}
                 </div>
               </div>
@@ -348,7 +357,7 @@ export function OverlayCanvas({
                   {/* Media content */}
                   <div className="p-2">
                     {event.type === 'image_audio' && event.image_url && (
-                      <img src={event.image_url} alt={event.content} className="w-full object-contain max-h-[50vh] rounded-lg" />
+                      <Image src={event.image_url} alt={event.content} width={800} height={600} unoptimized className="w-full object-contain max-h-[50vh] rounded-lg" />
                     )}
                     {event.type === 'video' && event.video_url && (
                       <video src={event.video_url} autoPlay loop={false} playsInline muted={false} className="w-full object-contain max-h-[50vh] rounded-lg"
@@ -357,7 +366,7 @@ export function OverlayCanvas({
                       />
                     )}
                     {event.type === 'image' && event.image_url && (
-                      <img src={event.image_url} alt={event.content} className="w-full object-contain max-h-[50vh] rounded-lg" />
+                      <Image src={event.image_url} alt={event.content} width={800} height={600} unoptimized className="w-full object-contain max-h-[50vh] rounded-lg" />
                     )}
                   </div>
 
@@ -373,9 +382,12 @@ export function OverlayCanvas({
                   <div className="flex items-center gap-2 p-2.5 border-t border-[#e8a33d]/30">
                     {event.sender_avatar_url ? (
                       <div className="w-7 h-7 border border-[#e8a33d]/70 overflow-hidden shrink-0">
-                        <img
+                        <Image
                           src={event.sender_avatar_url}
                           alt={event.sender_roblox_user ?? 'VIP'}
+                          width={28}
+                          height={28}
+                          unoptimized
                           className="w-full h-full object-cover"
                           style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }}
                         />

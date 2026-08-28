@@ -73,13 +73,13 @@ gcloud iam workload-identity-pools providers create-oidc github-awards-provider 
   --display-name="GitHub Awards Provider" \
   --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-condition="assertion.repository == 'Milumon/team-pollito-awards'"
+  --attribute-condition="assertion.repository == 'Milumon/team-pollitos-web'"
 
 # Binding
 gcloud iam service-accounts add-iam-policy-binding \
   github-deployer@<PROJECT_ID>.iam.gserviceaccount.com \
   --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-awards-pool/attribute.repository/Milumon/team-pollito-awards"
+  --member="principalSet://iam.googleapis.com/projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-awards-pool/attribute.repository/Milumon/team-pollitos-web"
 ```
 
 > El `attribute_condition` con `assertion.repository` es obligatorio desde 2025. Sin él, la creación del provider falla.

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import {
@@ -9,28 +10,28 @@ import {
   Check,
   Lock,
   ShieldAlert,
-  LogOut,
   Loader,
   Users,
-  ChevronRight,
-  Menu,
-  X,
   CalendarDays,
   Crown,
   Headphones,
   Link2,
   LogIn,
 } from 'lucide-react';
+import { TikTokRankingLanding } from '@/components/tiktok-rankings/RankingViews';
+import { PwaInstallWidget, requestPwaInstall } from '@/components/PwaInstallWidget';
+
 import { supabase } from '@/lib/supabaseClient';
 import { buildAccessPath } from '@/lib/authRouting';
 import { Session } from '@supabase/supabase-js';
 import { Header } from '@/components/ui/Header';
 import { NavBar } from '@/components/ui/NavBar';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { TikTokRankingLanding } from '@/components/tiktok-rankings/RankingViews';
-import { PwaInstallWidget, requestPwaInstall } from '@/components/PwaInstallWidget';
+import {
+  MEMBER_DISPLAY_NAME_INPUT_PATTERN,
+  MEMBER_DISPLAY_NAME_MAX_LENGTH,
+  MEMBER_DISPLAY_NAME_MIN_LENGTH,
+} from '@/lib/memberDisplayName';
 
 type Member = {
   roblox_user: string;
@@ -52,7 +53,10 @@ type InterviewStatus = {
   interview_date?: string;
   interview_time?: string;
   roblox_user?: string;
+  roblox_display_name?: string | null;
   tiktok_user?: string;
+  declared_minecraft_username?: string | null;
+  identity_confirmed_at?: string | null;
   ban_reason?: string;
   return_reason?: string;
   rejection_reason?: string;
@@ -61,6 +65,9 @@ type InterviewStatus = {
   testimonial_approved?: boolean;
   is_admin?: boolean;
   already_interviewed?: boolean;
+  needs_application?: boolean;
+  legacy_minecraft_username?: string | null;
+  legacy_minecraft_edition?: 'java' | 'bedrock' | null;
 };
 
 type VerifiedRobloxProfile = {
@@ -79,6 +86,11 @@ type Testimonial = {
 
 const ROBLOX_COMMUNITY_URL = 'https://www.roblox.com/es/communities/994126945/MILUMON-TEAM-POLLITO#!/about';
 const ROBLOX_SHIRT_URL = 'https://www.roblox.com/es/catalog/75919610314518/Camiseta-Team-Pollito';
+
+function getMemberDisplayName(status: InterviewStatus) {
+  const displayName = status.roblox_display_name?.trim().replace(/^🐣\s*|\s*🐣$/g, '').trim();
+  return displayName || status.roblox_user || 'POLLITO';
+}
 
 // Roles estáticos mapeados por Roblox username
 const getMemberRole = (username: string, member?: Member) => {
@@ -115,7 +127,7 @@ function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) 
             className="testimonial-card relative shrink-0 overflow-hidden rounded-[22px] bg-[#f5e9bc] shadow-[0_10px_26px_rgba(76,59,18,.12)]"
           >
             {t.roblox_avatar_url ? (
-              <img src={t.roblox_avatar_url} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" style={{ transform: 'scale(1.35) translateY(-3%)', transformOrigin: 'center top' }} />
+              <Image src={t.roblox_avatar_url} alt="" aria-hidden="true" fill sizes="320px" unoptimized className="absolute inset-0 h-full w-full object-cover" style={{ transform: 'scale(1.35) translateY(-3%)', transformOrigin: 'center top' }} />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-[#fff8dc] text-7xl">🐣</div>
             )}
@@ -154,11 +166,18 @@ export default function ComunidadPage() {
   const [testimonialSubmitting, setTestimonialSubmitting] = useState(false);
   const [testimonialSuccess, setTestimonialSuccess] = useState(false);
   const [testimonialError, setTestimonialError] = useState<string | null>(null);
-  const [isEditingTestimonial, setIsEditingTestimonial] = useState(false);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
 
   // Modal Rules State
   const [showRulesModal, setShowRulesModal] = useState(false);
+
+  // Initial identity confirmation
+  const [identityModalOpen, setIdentityModalOpen] = useState(false);
+  const [identityDisplayName, setIdentityDisplayName] = useState('');
+  const [identityTiktokUser, setIdentityTiktokUser] = useState('');
+  const [identityMinecraftUsername, setIdentityMinecraftUsername] = useState('');
+  const [identitySaving, setIdentitySaving] = useState(false);
+  const [identityError, setIdentityError] = useState<string | null>(null);
 
   // Loading states
   const [loadingMembers, setLoadingMembers] = useState(true);
@@ -229,6 +248,14 @@ export default function ComunidadPage() {
         const data = await res.json();
         console.log('DEBUG: /api/interviews/my-status devolvió:', data);
         setStatusInfo(data);
+        if (data.status === 'approved') {
+          const suggestedName = data.roblox_user || 'Pollito';
+          const savedName = data.roblox_display_name?.replace(/^🐣\s*|\s*🐣$/g, '').trim();
+          setIdentityDisplayName(data.identity_confirmed_at ? (savedName || suggestedName) : suggestedName);
+          setIdentityTiktokUser(data.tiktok_user || '');
+          setIdentityMinecraftUsername(data.declared_minecraft_username || '');
+          setIdentityModalOpen(!data.identity_confirmed_at);
+        }
         if (data.testimonial) {
           setUserTestimonial(data.testimonial);
         }
@@ -253,6 +280,52 @@ export default function ComunidadPage() {
       console.error('DEBUG ERROR: Excepción en fetchUserStatus:', err);
     } finally {
       setLoadingStatus(false);
+    }
+  };
+
+  const handleIdentitySubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!session) return;
+    setIdentitySaving(true);
+    setIdentityError(null);
+
+    try {
+      const response = await fetch('/api/profile/identity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          displayName: identityDisplayName,
+          tiktokUser: identityTiktokUser,
+          minecraftUsername: identityMinecraftUsername,
+        }),
+      });
+      const data = await response.json() as { error?: string; identityConfirmed?: boolean; detailsSaved?: boolean; profile?: InterviewStatus };
+      if (!response.ok) {
+        if (data.detailsSaved) {
+          setStatusInfo((current) => ({
+            ...current,
+            tiktok_user: identityTiktokUser.replace(/^@/, '').trim().toLowerCase(),
+            declared_minecraft_username: identityMinecraftUsername.trim() || null,
+          }));
+        }
+        throw new Error(data.error || 'No se pudo confirmar tu identidad.');
+      }
+
+      setStatusInfo((current) => ({
+        ...current,
+        roblox_display_name: data.profile?.roblox_display_name || `🐣 ${identityDisplayName.trim()} 🐣`,
+        tiktok_user: data.profile?.tiktok_user || identityTiktokUser.trim().toLowerCase(),
+        declared_minecraft_username: data.profile?.declared_minecraft_username || identityMinecraftUsername.trim() || null,
+        identity_confirmed_at: data.profile?.identity_confirmed_at || new Date().toISOString(),
+      }));
+      setIdentityModalOpen(false);
+    } catch (error: unknown) {
+      setIdentityError(error instanceof Error ? error.message : 'No se pudo confirmar tu identidad.');
+    } finally {
+      setIdentitySaving(false);
     }
   };
 
@@ -303,7 +376,6 @@ export default function ComunidadPage() {
       }
 
       setTestimonialSuccess(true);
-      setIsEditingTestimonial(false);
       setStatusInfo(prev => ({
         ...prev,
         testimonial: userTestimonial.trim(),
@@ -472,7 +544,8 @@ export default function ComunidadPage() {
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      element.style.scrollMarginTop = '88px';
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -584,38 +657,59 @@ export default function ComunidadPage() {
           onLogout={handleLogout}
         />
 
+
         {/* CONTENEDOR PRINCIPAL */}
         <div className="mx-auto mt-8 flex max-w-6xl flex-col gap-16 px-4 sm:mt-12 sm:gap-20">
           {/* HERO SECTION */}
           <section className="relative isolate min-h-[650px] overflow-hidden rounded-[2rem] bg-[#101216] text-white shadow-[0_20px_60px_rgba(27,29,34,.18)] sm:min-h-[620px]">
             <div className="absolute inset-0 -z-20 bg-[#101216]" />
-            <img src="/images/fondo.png" alt="" aria-hidden="true" className="absolute inset-0 -z-10 hidden h-full w-full object-cover object-center md:block" />
-            <img src="/images/fondomobileadaptado.png" alt="" aria-hidden="true" className="absolute inset-0 -z-10 h-full w-full object-cover object-top md:hidden" />
+            <Image src="/images/fondo.png" alt="" aria-hidden="true" fill sizes="100vw" className="absolute inset-0 -z-10 hidden h-full w-full object-cover object-center md:block" />
+            <Image src="/images/fondomobileadaptado.png" alt="" aria-hidden="true" fill sizes="100vw" className="absolute inset-0 -z-10 h-full w-full object-cover object-top md:hidden" />
             <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#0c0e12]/95 via-[#0c0e12]/70 to-transparent md:from-[#0c0e12]/90 md:via-[#0c0e12]/45" />
             <div className="flex min-h-[650px] items-start px-6 pb-12 pt-28 sm:min-h-[620px] sm:px-10 sm:pb-14 sm:pt-32 md:items-center md:pt-8">
               <div className="max-w-xl space-y-6">
               {session && statusInfo.status === 'approved' ? (
                 <>
-                  <div className="flex items-start gap-4">
-                    <h2 className="font-display text-4xl font-bold leading-none tracking-tight text-left sm:text-5xl md:text-6xl">
-                      ¡Bienvenido al Team, <br />
-                      <span className="mt-1 block font-display text-4xl font-bold tracking-tighter text-[#FFD500] text-shadow-hard-lg sm:text-5xl md:text-6xl">
-                        @{statusInfo.roblox_user || 'POLLITO'}!
+                  <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+                    <h2 className="min-w-0 max-w-full break-words font-display text-3xl font-bold leading-[.95] tracking-tight text-left sm:text-5xl md:text-6xl">
+                      ¡Bienvenido <br className="sm:hidden" />al Team Pollito, <br />
+                      <span className="mt-2 block break-words font-display text-3xl font-bold tracking-tighter text-[#FFD500] text-shadow-hard-lg sm:text-5xl md:text-6xl">
+                        {getMemberDisplayName(statusInfo)}!
                       </span>
                     </h2>
-                    <span className="shrink-0 text-5xl drop-shadow-[3px_3px_0_rgba(0,0,0,0.3)] md:text-6xl">🐣</span>
+                    <span className="shrink-0 text-4xl drop-shadow-[3px_3px_0_rgba(0,0,0,0.3)] sm:text-5xl md:text-6xl">🐣</span>
                   </div>
-                  <p className="max-w-xl font-sans text-sm font-semibold leading-relaxed text-white/80 sm:text-base">
+                  <p className="max-w-[28rem] break-words font-sans text-sm font-semibold leading-relaxed text-white/80 sm:text-base">
                     Tu cuenta está lista. Participa en los directos, juega con la comunidad y usa las herramientas del LIVE.
                   </p>
-                  <div className="flex flex-wrap gap-4">
-                    <Link href="/panel/sonidos" className="decoration-transparent">
-                      <Button variant="primary" size="lg">
-                        ✓ Participar en el LIVE
+                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+                    <Link href="/panel/sonidos" className="w-full decoration-transparent sm:w-auto">
+                      <Button variant="primary" size="lg" className="w-full sm:w-auto">
+                        ✓ Interactuar con el directo
                       </Button>
                     </Link>
-                    <Button variant="secondary" size="lg" onClick={requestPwaInstall}>
+                    <Button variant="secondary" size="lg" className="w-full sm:w-auto" onClick={requestPwaInstall}>
                       📲 Añadir a pantalla de inicio
+                    </Button>
+                  </div>
+                </>
+              ) : session && statusInfo.needs_application ? (
+                <>
+                  <div className="flex items-start gap-4">
+                    <h2 className="font-display text-4xl font-bold leading-none tracking-tight text-left sm:text-5xl md:text-6xl">
+                      Completa tu <br />
+                      <span className="mt-1 block font-display text-4xl font-bold tracking-tighter text-[#FFD500] text-shadow-hard-lg sm:text-5xl md:text-6xl">
+                        registro
+                      </span>
+                    </h2>
+                    <span className="shrink-0 text-5xl drop-shadow-[3px_3px_0_rgba(0,0,0,0.3)] md:text-6xl">📝</span>
+                  </div>
+                  <p className="max-w-xl font-sans text-sm font-semibold leading-relaxed text-white/80 sm:text-base">
+                    Detectamos una vinculación de Minecraft, pero todavía no tienes una postulación web. Completa tus datos para que un Administrador pueda revisar tu ingreso.
+                  </p>
+                  <div className="flex flex-wrap gap-4">
+                    <Button variant="primary" size="lg" onClick={() => scrollToSection('admision')}>
+                      Completar mi registro
                     </Button>
                   </div>
                 </>
@@ -680,7 +774,7 @@ export default function ComunidadPage() {
             <div className="grid gap-5 md:grid-cols-2">
               <article className="flex h-full flex-col overflow-hidden rounded-3xl border-2 border-[#FFD500] bg-white shadow-[8px_8px_0_#FFD500]">
                 <div className="flex min-h-48 items-center justify-center bg-[#FFF7DC] p-6 sm:min-h-56">
-                  <img src="/images/polooficial.webp" alt="Polo oficial del Team Pollito en Roblox" className="h-44 w-44 object-contain drop-shadow-[0_12px_18px_rgba(76,59,18,.16)] sm:h-52 sm:w-52" />
+                  <Image src="/images/polooficial.webp" alt="Polo oficial del Team Pollito en Roblox" width={208} height={208} className="h-44 w-44 object-contain drop-shadow-[0_12px_18px_rgba(76,59,18,.16)] sm:h-52 sm:w-52" />
                 </div>
                 <div className="flex flex-1 flex-col p-6 sm:p-7">
                   <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#D4A000]">Roblox</p>
@@ -708,7 +802,7 @@ export default function ComunidadPage() {
           </section>
 
           {/* TESTIMONIOS: inmediatamente debajo del hero */}
-          <section id="testimonios" className="order-6 space-y-6 py-2">
+          <section id="testimonios" className="order-2 scroll-mt-24 space-y-6 py-2">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -750,12 +844,12 @@ export default function ComunidadPage() {
 
           </section>
 
-          <div className="order-5">
+          <div className="order-4">
             <TikTokRankingLanding accessToken={session?.access_token} />
           </div>
 
           {/* BENEFICIOS SECTION */}
-          <section id="beneficios" className="order-2 space-y-6 pt-8">
+          <section id="beneficios" className="order-6 scroll-mt-24 space-y-6 pt-8">
             <div className="text-center">
               <h3 className="font-display font-bold text-3xl tracking-tight leading-none text-[#2D3139]">
                 ¿Qué puedes hacer en Team Pollito? 🐣
@@ -789,7 +883,7 @@ export default function ComunidadPage() {
           </section>
 
           {/* TIMELINE DE INGRESO */}
-          <section id="timeline-ingreso" className="order-7 space-y-8 pt-8">
+          <section id="timeline-ingreso" className="order-8 scroll-mt-24 space-y-8 pt-8">
             <div className="text-center">
               <h3 className="font-display font-bold text-3xl tracking-tight leading-none text-[#2D3139]">
                 ¿Quieres ser Miembro Oficial? 🐣
@@ -832,7 +926,7 @@ export default function ComunidadPage() {
           </section>
 
           {/* REGLAS & TESTIMONIOS */}
-          <section id="reglas-testimonios" className="order-4 w-full pt-8">
+          <section id="reglas-testimonios" className="order-7 scroll-mt-24 w-full pt-8">
             <div id="reglas" className="w-full space-y-5">
               <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
                 <span className="text-lg">📋</span>
@@ -864,7 +958,7 @@ export default function ComunidadPage() {
           </section>
 
           {/* ADMISIÓN / VIP SECTION */}
-          <section id="admision" className="order-8 pt-8">
+          <section id="admision" className="order-9 scroll-mt-24 pt-8">
             {session && !loadingStatus && statusInfo.status === 'approved' ? (
               null
             ) : (
@@ -1376,6 +1470,102 @@ export default function ComunidadPage() {
 
         </div>
       </div>
+
+      {identityModalOpen && session && statusInfo.status === 'approved' && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-[#090a0c]/75 p-4 backdrop-blur-sm">
+          <div className="my-6 w-full max-w-2xl rounded-3xl border-2 border-[#FFD500] bg-[#17191e] p-5 text-white shadow-[10px_10px_0_#FFD500] sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-[#FFD500]">Miembro Oficial</p>
+                <h2 className="mt-2 font-display text-3xl font-black tracking-tight sm:text-4xl">Confirma tu identidad</h2>
+              </div>
+              <span className="text-4xl" aria-hidden="true">🐣</span>
+            </div>
+            <p className="mt-4 max-w-xl text-sm font-medium leading-relaxed text-gray-300">
+              Este será tu Nombre Oficial dentro de Team Pollito. Se mostrará en Roblox y Minecraft cuando tu cuenta esté vinculada.
+            </p>
+            {statusInfo.is_admin && statusInfo.roblox_user?.toLowerCase() === 'milumonrt' && (
+              <p className="mt-3 rounded-xl border border-[#FFD500]/25 bg-[#FFD500]/10 px-4 py-3 text-xs font-semibold leading-relaxed text-[#FFE98A]">
+                Como Administrador, tu nombre se guardará en Team Pollito y Minecraft. Roblox no intentará etiquetar tu propia cuenta.
+              </p>
+            )}
+
+            <form onSubmit={handleIdentitySubmit} className="mt-6 space-y-5">
+              <label className="block text-sm font-bold text-white">
+                Nombre Oficial del Team
+                <input
+                  value={identityDisplayName}
+                  onChange={(event) => setIdentityDisplayName(event.target.value)}
+                  minLength={MEMBER_DISPLAY_NAME_MIN_LENGTH}
+                  maxLength={MEMBER_DISPLAY_NAME_MAX_LENGTH}
+                  pattern={MEMBER_DISPLAY_NAME_INPUT_PATTERN}
+                  title="Usa letras, números, espacios y, como máximo, un guion bajo en posición intermedia."
+                  required
+                  className="mt-2 w-full rounded-xl border border-white/15 bg-[#25282e] px-4 py-3 text-white outline-none placeholder:text-gray-500 focus:border-[#FFD500]"
+                  placeholder="Ejemplo: Pollito123"
+                />
+                <span className="mt-1 block text-xs font-medium text-gray-500">Usaremos 🐣 {identityDisplayName.trim() || 'TuUsuario'} 🐣</span>
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-[#202328] p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#FFD500]">Roblox</p>
+                  <p className="mt-2 truncate font-black">🐣 {identityDisplayName.trim() || 'TuUsuario'} 🐣</p>
+                  <p className="mt-1 truncate text-xs text-gray-500">Cuenta: @{statusInfo.roblox_user}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-[#202328] p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#FFD500]">Minecraft</p>
+                  <p className="mt-2 truncate font-black">🐣 {identityDisplayName.trim() || 'TuUsuario'} 🐣</p>
+                  <p className="mt-1 text-xs text-gray-500">Se usará cuando apruebes tu cuenta.</p>
+                </div>
+              </div>
+
+              <label className="block text-sm font-bold text-white">
+                Usuario de TikTok
+                <div className="mt-2 flex gap-2">
+                  <span className="flex items-center rounded-xl border border-white/15 bg-[#25282e] px-3 text-gray-400">@</span>
+                  <input
+                    value={identityTiktokUser}
+                    onChange={(event) => setIdentityTiktokUser(event.target.value.replace(/^@/, ''))}
+                    maxLength={24}
+                    required
+                    className="min-w-0 flex-1 rounded-xl border border-white/15 bg-[#25282e] px-4 py-3 text-white outline-none placeholder:text-gray-500 focus:border-[#FFD500]"
+                    placeholder="tu_usuario"
+                  />
+                  <a href={`https://www.tiktok.com/@${identityTiktokUser.replace(/^@/, '').trim()}`} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center rounded-xl border border-white/15 px-3 text-xs font-bold text-gray-300 transition hover:border-[#FFD500] hover:text-white">Ver perfil</a>
+                </div>
+              </label>
+
+              <label className="block text-sm font-bold text-white">
+                Usuario de Minecraft <span className="font-medium text-gray-500">(opcional)</span>
+                <input
+                  value={identityMinecraftUsername}
+                  onChange={(event) => setIdentityMinecraftUsername(event.target.value)}
+                  maxLength={32}
+                  className="mt-2 w-full rounded-xl border border-white/15 bg-[#25282e] px-4 py-3 text-white outline-none placeholder:text-gray-500 focus:border-[#FFD500]"
+                  placeholder="Ejemplo: Pollito123"
+                />
+                <span className="mt-1 block text-xs font-medium text-gray-500">Guardaremos este dato para precargar la vinculación. Todavía no es acceso al servidor.</span>
+              </label>
+
+              {identityMinecraftUsername.trim() && (
+                <Link href={`/minecraft/link?username=${encodeURIComponent(identityMinecraftUsername.trim())}`} className="block rounded-xl border border-[#FFD500]/40 bg-[#FFD500]/10 px-4 py-3 text-sm font-bold text-[#FFD500] transition hover:bg-[#FFD500]/20">
+                  Después podrás vincular {identityMinecraftUsername.trim()} en Minecraft →
+                </Link>
+              )}
+
+              {identityError && (
+                <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200">{identityError}</div>
+              )}
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => setIdentityModalOpen(false)} className="rounded-xl border border-white/15 px-5 py-3 text-sm font-bold text-gray-300 transition hover:bg-white/5">Ahora no</button>
+                <button type="submit" disabled={identitySaving} className="rounded-xl bg-[#FFD500] px-5 py-3 text-sm font-black text-black transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">{identitySaving ? 'Guardando...' : 'Confirmar mi identidad'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DE REGLAS COMPLETAS */}
       {showRulesModal && (

@@ -33,7 +33,22 @@ type UserRankProfile = {
   has_minecraft: boolean;
 };
 
+type Profile = {
+  id: string;
+  roblox_user: string;
+  roblox_display_name: string;
+  roblox_avatar_url: string | null;
+  link_status: string;
+  minecraft_rank: string | null;
+};
+
 type TemporaryReset = { username: string; password: string; expiresAt: string };
+
+const RANKS = [
+  { value: 'pollito_invitado', label: 'Pollito Invitado', color: 'text-gray-400' },
+  { value: 'pollito_oficial', label: 'Pollito Oficial', color: 'text-yellow-400' },
+  { value: 'pollito_admin', label: 'Pollito Admin', color: 'text-red-400' },
+];
 
 function requestStatus(request: MinecraftRequest) {
   if (request.status === 'pending' && request.verified_at) return 'Identidad verificada · acceso automático';
@@ -64,6 +79,7 @@ export default function MinecraftAdminView() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [temporaryReset, setTemporaryReset] = useState<TemporaryReset | null>(null);
+  const [activeTab, setActiveTab] = useState<'requests' | 'ranks'>('requests');
 
   const showToast = (msg: string) => {
     setSuccessMessage(msg);
@@ -72,10 +88,19 @@ export default function MinecraftAdminView() {
 
   const loadRequests = async () => {
     try {
-      const response = await adminFetch('/api/admin/minecraft/requests');
-      const payload = await readApiPayload(response);
-      if (!response.ok) throw new Error(String(payload.error || 'No se pudieron cargar las solicitudes.'));
-      setRequests((payload.requests as MinecraftRequest[]) ?? []);
+      const [requestsResponse, ranksResponse] = await Promise.all([
+        adminFetch('/api/admin/minecraft/requests'),
+        adminFetch('/api/admin/minecraft/ranks'),
+      ]);
+      
+      const requestsPayload = await readApiPayload(requestsResponse);
+      if (!requestsResponse.ok) throw new Error(String(requestsPayload.error || 'No se pudieron cargar las solicitudes.'));
+      setRequests((requestsPayload.requests as MinecraftRequest[]) ?? []);
+
+      const ranksPayload = await readApiPayload(ranksResponse);
+      if (ranksResponse.ok) {
+        setProfiles((ranksPayload.profiles as Profile[]) ?? []);
+      }
     } catch (loadError: unknown) {
       setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar las solicitudes.');
     }

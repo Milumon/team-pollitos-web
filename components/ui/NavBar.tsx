@@ -80,7 +80,7 @@ export const NavBar: React.FC<NavBarProps> = ({
           {[
             { key: 'inicio', label: 'Inicio' },
             { key: 'beneficios', label: 'Beneficios' },
-            { key: 'stats-evento', label: 'Eventos' },
+            { key: 'rankings', label: 'Rankings' },
             { key: 'timeline-ingreso', label: 'Cómo Ingresar' },
             { key: 'reglas-testimonios', label: 'Reglas' },
             { key: 'miembros', label: 'Miembros' },

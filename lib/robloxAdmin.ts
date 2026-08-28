@@ -196,7 +196,7 @@ async function getCsrfToken(): Promise<string> {
   return response.headers.get('x-csrf-token') || '';
 }
 
-export async function tagRobloxUser(targetUserId: number, action: 'add' | 'remove') {
+export async function tagRobloxUser(targetUserId: number, action: 'add' | 'remove', customTag?: string) {
   console.log(`[RobloxAdmin] tagRobloxUser: targetUserId=${targetUserId}, action=${action}`);
   let userTag = '';
 
@@ -206,7 +206,7 @@ export async function tagRobloxUser(targetUserId: number, action: 'add' | 'remov
       throw new Error(`No se pudo obtener el perfil de Roblox para el usuario ${targetUserId}`);
     }
     const displayName = profile.displayName || profile.name || `Usuario_${targetUserId}`;
-    userTag = `🐣 ${displayName} 🐣`;
+    userTag = customTag || `🐣 ${displayName} 🐣`;
   }
 
   const makeRequest = async (token?: string) => {

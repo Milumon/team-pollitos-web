@@ -1,0 +1,3 @@
+# Supabase CLI configuration for remote and local migrations.
+[db.migrations]
+enabled = true

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import NextImage from 'next/image';
 import { VoteState } from '../src/types';
 import { soundManager } from '../lib/sound';
 import { Share2, Check, Download } from 'lucide-react';
@@ -15,11 +16,6 @@ type ShareProfile = {
 interface ShareCardProps {
   votes: VoteState;
   robloxProfile: ShareProfile;
-  categories: Array<{
-    id: number;
-    title: string;
-    emoji: string;
-  }>;
   nominees: Array<{
     id: string;
     name: string;
@@ -36,24 +32,6 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
     img.onerror = () => resolve(null);
     img.src = url;
   });
-}
-
-// Helper: draw rounded rect path
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number, h: number, r: number
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
 }
 
 // Helper: draw circular clipped image
@@ -120,8 +98,6 @@ async function generateStoryCanvas(
   voterAvatarUrl: string | null,
   mvpName: string,
   mvpAvatarUrl: string | null,
-  voteCount: number,
-  totalCategories: number
 ): Promise<HTMLCanvasElement> {
   const W = 1080;
   const H = 1920;
@@ -266,7 +242,7 @@ async function generateStoryCanvas(
   return canvas;
 }
 
-export default function ShareCard({ votes, robloxProfile, categories, nominees }: ShareCardProps) {
+export default function ShareCard({ votes, robloxProfile, nominees }: ShareCardProps) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -277,7 +253,6 @@ export default function ShareCard({ votes, robloxProfile, categories, nominees }
   const mvpNomineeId = votes[mvpCategoryId];
   const mvpNominee = nominees.find((n) => n.id === mvpNomineeId);
 
-  const voteCount = Object.keys(votes).length;
   const ballotOwnerName = robloxProfile?.displayName || 'Pollito verificado';
   const ballotOwnerHandle = robloxProfile?.username ? `@${robloxProfile.username}` : null;
 
@@ -291,9 +266,7 @@ export default function ShareCard({ votes, robloxProfile, categories, nominees }
           ballotOwnerHandle,
           robloxProfile?.avatarUrl || null,
           mvpNominee?.name || 'Tu selección',
-          mvpNominee?.profileImageUrl || null,
-          voteCount,
-          categories.length
+          mvpNominee?.profileImageUrl || null
         );
         if (active) {
           setPreviewUrl(canvas.toDataURL('image/png'));
@@ -310,7 +283,7 @@ export default function ShareCard({ votes, robloxProfile, categories, nominees }
     return () => {
       active = false;
     };
-  }, [ballotOwnerName, ballotOwnerHandle, robloxProfile?.avatarUrl, mvpNominee?.name, mvpNominee?.profileImageUrl, voteCount, categories.length]);
+  }, [ballotOwnerName, ballotOwnerHandle, robloxProfile?.avatarUrl, mvpNominee?.name, mvpNominee?.profileImageUrl]);
 
   const handleDownloadImage = async () => {
     if (!previewUrl || downloading) return;
@@ -382,9 +355,12 @@ export default function ShareCard({ votes, robloxProfile, categories, nominees }
             <p className="font-comic text-xs font-black uppercase text-orange-600">Generando preview...</p>
           </div>
         ) : previewUrl ? (
-          <img
+          <NextImage
             src={previewUrl}
             alt="Tu Ballot Oficial"
+            width={1080}
+            height={1920}
+            unoptimized
             className="w-full h-full object-cover select-none pointer-events-none"
           />
         ) : (
@@ -460,9 +436,12 @@ export default function ShareCard({ votes, robloxProfile, categories, nominees }
           </button>
 
           <div className="w-full max-w-[450px] aspect-[1080/1920] rounded-3xl overflow-hidden shadow-2xl relative">
-            <img
+            <NextImage
               src={previewUrl}
               alt="Ballot Fullscreen Preview"
+              width={1080}
+              height={1920}
+              unoptimized
               className="w-full h-full object-contain pointer-events-auto cursor-zoom-out select-none"
             />
           </div>

@@ -244,6 +244,7 @@ function publicState(importState) {
       period,
       captured: captured.has(`${metric}/${period}`),
       error: failures.get(`${metric}/${period}`) || null,
+      data: importState?.sets?.get(`${metric}/${period}`) || null,
     })),
     error: importState?.error || null,
     result: importState?.result || null,

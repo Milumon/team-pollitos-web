@@ -24,16 +24,17 @@ export async function GET(request: NextRequest) {
     ? { data: [], error: null }
     : await supabaseAdmin
       .from('profiles')
-      .select('id, roblox_display_name')
-      .in('id', userIds);
+    .select('id, roblox_display_name, link_status')
+    .in('id', userIds);
 
   if (profilesError) {
     console.error('[Minecraft whitelist profiles GET]:', profilesError.message);
     return NextResponse.json({ error: 'No se pudieron consultar los perfiles.' }, { status: 500 });
   }
 
+  const approvedUserIds = new Set((profiles ?? []).filter((profile) => profile.link_status === 'approved').map((profile) => profile.id));
   const nicknameByUserId = new Map((profiles ?? []).map((profile) => [profile.id, profile.roblox_display_name?.trim() || null]));
-  const accounts = (data ?? []).map((account) => ({
+  const accounts = (data ?? []).filter((account) => approvedUserIds.has(account.user_id)).map((account) => ({
     ...account,
     player_id: account.player_id ?? `pending:${account.username}`,
     nickname: nicknameByUserId.get(account.user_id) ?? null,

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Image, Film } from 'lucide-react';
+import Image from 'next/image';
+import { Loader2, Image as ImageIcon, Film } from 'lucide-react';
 
 interface Session {
   access_token: string;
@@ -46,7 +47,7 @@ export default function MediaSubmissionsHistory({ session }: Props) {
   }, [session]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => void load());
   }, [load]);
 
   const pending = submissions.filter(s => s.status === 'pending' || s.status === 'rejected');
@@ -70,13 +71,13 @@ export default function MediaSubmissionsHistory({ session }: Props) {
           {pending.map((sub) => (
             <div key={sub.id} className="flex items-start gap-3 bg-[#35373d] border border-neutral-700/40 rounded-xl p-3">
               {/* Thumbnail */}
-              <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-800 shrink-0 flex items-center justify-center">
+              <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-neutral-800 shrink-0 flex items-center justify-center">
                 {sub.media_type === 'image_audio' && sub.image_url ? (
-                  <img src={sub.image_url} alt="" className="w-full h-full object-cover" />
+                   <Image src={sub.image_url} alt={sub.name} fill sizes="40px" unoptimized className="w-full h-full object-cover" />
                 ) : sub.video_url ? (
                   <video src={sub.video_url} className="w-full h-full object-cover" muted />
                 ) : sub.media_type === 'image_audio' ? (
-                  <Image className="w-5 h-5 text-gray-600" />
+                   <ImageIcon className="w-5 h-5 text-gray-600" />
                 ) : (
                   <Film className="w-5 h-5 text-gray-600" />
                 )}

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const timeoutId = setTimeout(() => controller.abort(), 2000);
 
     try {
-      const res = await fetch(vmBaseUrl, {
+      await fetch(vmBaseUrl, {
         method: 'GET',
         signal: controller.signal,
       });
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
       // Aunque responda con 404, 403, 401, etc., el servidor está activo.
       return NextResponse.json({ connected: true });
-    } catch (fetchErr) {
+    } catch {
       clearTimeout(timeoutId);
       return NextResponse.json({ connected: false, reason: 'La máquina no responde o está apagada' });
     }

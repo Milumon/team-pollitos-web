@@ -26,18 +26,32 @@ export async function GET(request: NextRequest) {
     // 2. Check profiles link_status first
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('link_status, roblox_user, roblox_user_id, tiktok_user, roblox_avatar_url, rejection_reason, testimonial, testimonial_approved, is_admin')
+      .select('link_status, roblox_user, roblox_user_id, roblox_display_name, tiktok_user, roblox_avatar_url, declared_minecraft_username, identity_confirmed_at, rejection_reason, testimonial, testimonial_approved, is_admin')
       .eq('id', user.id)
       .maybeSingle();
 
     const isAdminUser = !!profile?.is_admin;
 
+    const { data: legacyMinecraftAccount, error: minecraftError } = await supabaseAdmin
+      .from('minecraft_accounts')
+      .select('edition, username')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (minecraftError) {
+      return NextResponse.json({ error: minecraftError.message }, { status: 500 });
+    }
+
     if (profile?.link_status === 'approved') {
       return NextResponse.json({
         status: 'approved',
         roblox_user: profile.roblox_user,
+        roblox_display_name: profile.roblox_display_name,
         tiktok_user: profile.tiktok_user,
         avatar_url: profile.roblox_avatar_url,
+        declared_minecraft_username: profile.declared_minecraft_username,
+        identity_confirmed_at: profile.identity_confirmed_at,
         testimonial: profile.testimonial,
         testimonial_approved: profile.testimonial_approved,
         is_admin: isAdminUser,
@@ -100,7 +114,13 @@ export async function GET(request: NextRequest) {
         .eq('id', user.id);
     }
 
-    return NextResponse.json({ status: 'none', is_admin: isAdminUser });
+    return NextResponse.json({
+      status: 'none',
+      is_admin: isAdminUser,
+      needs_application: Boolean(legacyMinecraftAccount),
+      legacy_minecraft_username: legacyMinecraftAccount?.username || null,
+      legacy_minecraft_edition: legacyMinecraftAccount?.edition || null,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

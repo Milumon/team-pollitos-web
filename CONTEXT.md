@@ -8,6 +8,29 @@ Portal unificado para la gestión de la comunidad de Team Pollito, la administra
 Usuario que vinculó sus cuentas de Roblox y TikTok, aceptó las reglas y fue aprobado manualmente en el sistema por el Administrador.
 _Avoid_: Miembro verificado, Votante, Usuario común
 
+**Usuario de Roblox (Roblox User)**:
+Cuenta de Roblox comprobada y asociada a un Miembro Oficial. Representa la identidad del jugador en Roblox y no es el nombre que el usuario elige para mostrarse dentro del Team Pollito.
+_Avoid_: Nickname, Nombre visible, Tag
+
+**Nombre Visible del Miembro (Member Display Name)**:
+Nombre elegido por un Miembro Oficial para representar su identidad pública y oficial dentro de Team Pollito. Se muestra en el tag oficial de Roblox y, cuando su Cuenta de Minecraft está verificada y aprobada, en el chat y la lista de jugadores del servidor. El avatar asociado puede ser el avatar de Roblox. Es distinto de los usernames reales de ambas plataformas y puede estar sujeto a las reglas y límites de la comunidad. Si el Miembro no elige un nombre personalizado, se forma usando su Usuario de Roblox entre los emojis `🐣`, por ejemplo `🐣 UsuarioDeRoblox 🐣`.
+Cuando se modifica, el nuevo valor se sincroniza con Roblox y con las cuentas de Minecraft ya aprobadas del Miembro.
+_Avoid_: Usuario de Roblox, Username de Minecraft, Nickname sin contexto
+
+**Confirmación Inicial de Identidad (Initial Identity Confirmation)**:
+Paso que aparece cuando un candidato ya fue aprobado y vuelve a la landing. Permite revisar sus cuentas vinculadas, elegir o confirmar su Nombre Visible del Miembro y aceptar cómo se mostrará en Roblox y Minecraft. El valor por defecto aparece preseleccionado y solo se aplica después de una confirmación explícita; cerrar el paso lo deja pendiente.
+La confirmación puede quedar parcialmente completada: el Usuario de TikTok Declarado y el Usuario de Minecraft Declarado se conservan aunque el tag de Roblox falle, pero la identidad no se considera completa hasta resolver Roblox.
+Minecraft es opcional: la Confirmación Inicial de Identidad se completa cuando Roblox y TikTok están confirmados, aunque la Cuenta de Minecraft todavía no esté vinculada.
+_Avoid_: Configuración del panel, Primer acceso a la consola, Verificación repetida
+
+**Cuenta de Minecraft (Minecraft Account)**:
+Cuenta de Minecraft que una persona solicita vincular al portal. Su vinculación es opcional para el Miembro Oficial y requiere el flujo propio de verificación y aprobación de Minecraft. No debe confundirse con un Usuario de Minecraft declarado, que aún no está verificado.
+_Avoid_: Nickname de Minecraft, Usuario de Minecraft sin verificar como cuenta vinculada
+
+**Usuario de Minecraft Declarado (Declared Minecraft Username)**:
+Nombre de Minecraft que un Miembro Oficial puede guardar como referencia antes de iniciar o completar la vinculación. Puede precargar el formulario de vinculación, pero no concede acceso al servidor ni se muestra como cuenta asociada hasta que Minecraft lo verifique y un Administrador lo apruebe.
+_Avoid_: Cuenta de Minecraft, Username verificado, Acceso al servidor
+
 **Candidato (Candidate / Pollito)**:
 Usuario que se postuló al Team Pollito y está esperando o agendando su entrevista 1:1.
 _Avoid_: Postulante, Aspirante, Candidato a desbaneo
@@ -60,6 +83,10 @@ _Avoid_: Log del sistema, Historial de visitas, Entrada de consola
 Conjunto unificado de directrices visuales basadas en el estilo Neobrutalismo Oscuro Unificado (tipografía Anton/Inter, color amarillo #FFD500, bordes de 3px y sombras duras amarillas en modo oscuro y negras en modo claro). **Excepción**: El Panel de Control (admin) usa un estilo propio más sobrio — `border border-neutral-700/60`, sombras suaves `shadow-[0_4px_12px_rgba(0,0,0,.25)]`, color acento `#FFC200` (no `#FFD500`), y fondos `#2b2d31` / `#35373d` / `#171A20`. Los bordes de 3px y sombras duras son EXCLUSIVOS del sitio público y del panel del miembro.
 _Avoid_: Estilo SaaS, UI gamer, Tema Discord
 
+**Guía de Instalación PWA (PWA Installation Guide)**:
+Instrucciones contextuales para instalar Team Pollito según el navegador y el dispositivo de origen. Debe usar el nombre y los controles propios del navegador detectado, distinguir Safari de Chrome en iOS, y ofrecer una alternativa para navegadores integrados dentro de otras aplicaciones.
+_Avoid_: Instrucciones genéricas de aplicación, Tutorial de móvil
+
 **Envío de Audio (Audio Submission)**:
 Audio subido por un Miembro Oficial desde la consola, sujeto a revisión de un Administrador antes de ser disponibilizado como Sonido Público o Sonido Privado. Mientras está en revisión, solo el Miembro que lo envió puede verlo en su historial de envíos.
 _Avoid_: Propuesta de sonido, Audio pendiente, Upload de usuario
@@ -79,6 +106,10 @@ _Avoid_: Diálogo molesto, Confirmación de envío, Alert de spam
 **Identidad TikTok (TikTok Identity)**:
 Persona reconocida de forma estable por TikTok, aunque cambie su nombre público. Puede estar vinculada a un Miembro Oficial o permanecer sin vincular.
 _Avoid_: Username de TikTok, Perfil del portal, Nickname
+
+**Usuario de TikTok Declarado (Declared TikTok Username)**:
+Usuario de TikTok que el Miembro Oficial muestra en su perfil del portal. Puede editarse y el cambio se aplica inmediatamente. La edición no modifica los Snapshots de Ranking ni elimina la Identidad TikTok histórica.
+_Avoid_: Identidad TikTok, Usuario histórico, Nombre visible del Miembro
 
 **Batch de Rankings (Ranking Batch)**:
 Conjunto indivisible de las clasificaciones de espectadores y regalos para último live, 7, 28 y 60 días, capturadas durante una misma importación. Solo puede aceptarse completo.

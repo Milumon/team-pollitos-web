@@ -25,6 +25,9 @@ function createLinkCode() {
 export async function GET() {
   const session = await getServerSession();
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (session.linkStatus !== 'approved') {
+    return NextResponse.json({ error: 'Solo los Miembros Oficiales pueden vincular Minecraft.' }, { status: 403 });
+  }
 
   const { data, error } = await supabaseAdmin
     .from('minecraft_accounts')
@@ -49,6 +52,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getServerSession();
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (session.linkStatus !== 'approved') {
+    return NextResponse.json({ error: 'Solo los Miembros Oficiales pueden vincular Minecraft.' }, { status: 403 });
+  }
 
   let body: { edition?: unknown; username?: unknown; playerId?: unknown };
   try {
@@ -67,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   const { data: existingAccount, error: existingAccountError } = await supabaseAdmin
     .from('minecraft_accounts')
-    .select('user_id')
+    .select('id, user_id, status, verified_at, link_code_expires_at')
     .eq('edition', edition)
     .ilike('username', username)
     .neq('user_id', session.user.id)
@@ -80,6 +86,44 @@ export async function POST(request: NextRequest) {
   }
 
   if (existingAccount) {
+    // A request can be left under another profile when the user changes auth
+    // provider. It is safe to recover it before Minecraft verifies the code;
+    // verified accounts remain protected by the conflict below.
+    if (existingAccount.status === 'pending' && !existingAccount.verified_at) {
+      const code = createLinkCode();
+      const expiresAt = new Date(Date.now() + CODE_TTL_MS).toISOString();
+      const { data, error } = await supabaseAdmin
+        .from('minecraft_accounts')
+        .update({
+          user_id: session.user.id,
+          username,
+          player_id: `pending:${session.user.id}:${edition}`,
+          link_code_hash: hashCode(code),
+          link_code: code,
+          link_code_expires_at: expiresAt,
+          verified_at: null,
+          status: 'pending',
+          rejection_reason: null,
+          approved_by: null,
+          approved_at: null,
+          revoked_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingAccount.id)
+        .select('id, edition, username, player_id, status, rejection_reason, verified_at, link_code, link_code_expires_at, created_at, updated_at')
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          return NextResponse.json({ error: 'Ya tienes una solicitud de Minecraft para esta edición.' }, { status: 409 });
+        }
+        console.error('[Minecraft link recovery]:', error.message);
+        return NextResponse.json({ error: 'No se pudo recuperar la solicitud anterior.' }, { status: 500 });
+      }
+
+      return NextResponse.json({ account: data, code, expiresAt }, { status: 201 });
+    }
+
     return NextResponse.json({ error: 'Esa cuenta de Minecraft ya está vinculada a otro usuario.' }, { status: 409 });
   }
 

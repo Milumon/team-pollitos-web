@@ -1832,7 +1832,6 @@ export default function LegacyAdminPanel({
                 <div className="flex gap-3">
                   <div className="w-12 h-12 rounded-2xl border border-neutral-700/60 bg-[#2b2d31] overflow-hidden flex items-center justify-center shrink-0 ">
                     {nominee.profile_image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={nominee.profile_image_url} alt={nominee.roblox_user} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-xl">🐣</span>
@@ -1944,7 +1943,6 @@ export default function LegacyAdminPanel({
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="w-8 h-8 rounded-2xl bg-[#2b2d31] border border-neutral-700/60 overflow-hidden flex items-center justify-center shrink-0">
                               {nominee.profile_image_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
                                 <img src={nominee.profile_image_url} alt={nominee.nickname || 'Nominee'} className="w-full h-full object-cover" />
                               ) : (
                                 <span className="text-sm">🐣</span>
@@ -2031,7 +2029,6 @@ export default function LegacyAdminPanel({
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-2xl border border-neutral-700/60 bg-[#2b2d31] overflow-hidden shrink-0 flex items-center justify-center ">
                           {u.robloxAvatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={u.robloxAvatarUrl} alt={u.robloxUser || 'User'} className="w-full h-full object-cover" style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }} />
                           ) : (
                             <span className="text-sm">🐣</span>
@@ -2158,13 +2155,12 @@ export default function LegacyAdminPanel({
             <p className="text-xs text-gray-400 mt-1 font-medium">Todo al día. Las nuevas solicitudes aparecerán aquí automáticamente.</p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-2">
             {pendingUsers.map((u: AdminUser) => (
-              <article key={u.id} className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-[0_4px_8px_rgba(0,0,0,.2)]">
+              <article key={u.id} className="min-w-0 bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-[0_4px_8px_rgba(0,0,0,.2)]">
                 <div className="flex gap-4">
                   <div className="w-12 h-12 rounded-2xl border border-neutral-700/60 bg-[#2b2d31] overflow-hidden flex items-center justify-center shrink-0 ">
                     {u.robloxAvatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={u.robloxAvatarUrl} alt={u.robloxUser || 'User'} className="w-full h-full object-cover" style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }} />
                     ) : (
                       <span className="text-xl">🐣</span>
@@ -2210,19 +2206,19 @@ export default function LegacyAdminPanel({
                   );
                 })()}
 
-                <div className="flex gap-2 pt-2 border-t border-black/20">
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-black/20">
                   <a
                     href={`https://www.roblox.com/users/${u.robloxUser || ''}/profile`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 py-1.5 bg-[#2b2d31] hover:bg-[#20242D] text-white border border-neutral-700/60 text-center font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97]"
+                    className="min-w-0 py-1.5 bg-[#2b2d31] hover:bg-[#20242D] text-white border border-neutral-700/60 text-center font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97] whitespace-nowrap"
                   >
                     Ver Perfil ↗
                   </a>
                   <button
                     type="button"
                     onClick={() => handleVerifyLink(u.id, 'approve')}
-                    className="flex-1 py-1.5 bg-[#FFC200] hover:bg-[#ffe359] text-black border border-neutral-700/60 font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97]"
+                    className="min-w-0 py-1.5 bg-[#FFC200] hover:bg-[#ffe359] text-black border border-neutral-700/60 font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97] whitespace-nowrap"
                   >
                     Aceptar
                   </button>
@@ -2232,7 +2228,7 @@ export default function LegacyAdminPanel({
                       const reason = window.prompt('Motivo de rechazo:');
                       if (reason !== null) handleVerifyLink(u.id, 'reject', reason);
                     }}
-                    className="py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-neutral-700/60 font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97]"
+                    className="min-w-0 py-1.5 px-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-neutral-700/60 font-display font-medium text-xs rounded-xl transition-colors cursor-pointer active:scale-[0.97] whitespace-nowrap"
                   >
                     Rechazar
                   </button>
@@ -2291,7 +2287,6 @@ export default function LegacyAdminPanel({
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-[#1e1f22] overflow-hidden shrink-0">
                       {u.robloxAvatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={u.robloxAvatarUrl} alt={u.robloxUser || ''} className="w-full h-full object-cover" style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-sm">🐣</div>
@@ -4162,7 +4157,6 @@ export default function LegacyAdminPanel({
                 <div className="flex flex-col items-center text-center p-4 bg-[#171A20] border border-neutral-700/60 rounded-xl ">
                   <div className="w-20 h-20 rounded-2xl border border-neutral-700/60 bg-[#111318] overflow-hidden mb-3 ">
                     {editingNominee.profile_image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={editingNominee.profile_image_url} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-3xl flex items-center justify-center h-full">🐣</span>
@@ -4260,7 +4254,6 @@ export default function LegacyAdminPanel({
               <div className="flex items-center gap-3 mb-5 border-b-2 border-black pb-3 shrink-0">
                 <div className="w-11 h-11 rounded-lg border border-neutral-700/60 bg-[#171A20] overflow-hidden flex items-center justify-center shrink-0 ">
                   {inspectingUser.robloxAvatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={inspectingUser.robloxAvatarUrl} alt={inspectingUser.robloxUser || 'User'} className="w-full h-full object-cover" style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }} />
                   ) : (
                     <span className="text-xl">🐣</span>
@@ -4355,7 +4348,6 @@ export default function LegacyAdminPanel({
                       <span className="text-xl">🐣</span>
                     )
                   ) : editingUser.robloxAvatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={editingUser.robloxAvatarUrl} alt={editingUser.robloxUser || 'User'} className="w-full h-full object-cover" style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }} />
                   ) : (
                     <span className="text-xl">🐣</span>

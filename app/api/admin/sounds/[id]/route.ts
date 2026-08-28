@@ -161,7 +161,7 @@ export async function PATCH(
       trimEnd = body.trimEnd;
     }
 
-    const updates: Record<string, any> = {};
+    const updates: Record<string, string | number | boolean | null> = {};
     if (name !== undefined && name !== null) {
       const normalizedName = String(name).trim();
       if (normalizedName) updates.name = normalizedName;

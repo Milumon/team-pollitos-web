@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Image, Film, Volume2, Check, X } from 'lucide-react';
+import Image from 'next/image';
+import { Loader2, Image as ImageIcon, Film, Volume2, Check, X } from 'lucide-react';
 
 interface MediaSubmission {
   id: string;
@@ -38,7 +39,7 @@ const TYPE_COLORS: Record<string, string> = {
   image: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
 };
 
-export default function MediaSubmissionsPanel({ apiFetch, token }: Props) {
+export default function MediaSubmissionsPanel({ apiFetch }: Props) {
   const [submissions, setSubmissions] = useState<MediaSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
@@ -60,7 +61,7 @@ export default function MediaSubmissionsPanel({ apiFetch, token }: Props) {
   }, [statusFilter, apiFetch]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => void load());
   }, [load]);
 
   const handleApprove = async (id: string) => {
@@ -158,17 +159,17 @@ export default function MediaSubmissionsPanel({ apiFetch, token }: Props) {
             <div key={sub.id} className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,.25)]">
               <div className="flex items-start gap-4">
                 {/* Preview */}
-                <div className="w-16 h-16 rounded-xl overflow-hidden bg-neutral-800 shrink-0 flex items-center justify-center">
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-neutral-800 shrink-0 flex items-center justify-center">
                   {sub.media_type === 'image' && sub.image_url ? (
-                    <img src={sub.image_url} alt="" className="w-full h-full object-cover" />
+                    <Image src={sub.image_url} alt="" fill sizes="64px" unoptimized className="w-full h-full object-cover" />
                   ) : sub.media_type === 'image_audio' && sub.image_url ? (
-                    <img src={sub.image_url} alt="" className="w-full h-full object-cover" />
+                    <Image src={sub.image_url} alt="" fill sizes="64px" unoptimized className="w-full h-full object-cover" />
                   ) : sub.media_type === 'video' && sub.video_url ? (
                     <video src={sub.video_url} className="w-full h-full object-cover" muted />
                   ) : sub.media_type === 'audio' ? (
                     <Volume2 className="w-6 h-6 text-gray-600" />
                   ) : sub.media_type === 'image_audio' ? (
-                    <Image className="w-6 h-6 text-gray-600" />
+                     <ImageIcon className="w-6 h-6 text-gray-600" />
                   ) : (
                     <Film className="w-6 h-6 text-gray-600" />
                   )}

@@ -24,6 +24,21 @@ async function fetchRobloxUserIdFromUsername(username: string): Promise<number |
   }
 }
 
+async function fetchRobloxAvatar(userId: number): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://thumbnails.roblox.com/v1/users/avatar?userIds=${userId}&size=420x420&format=Png&isCircular=false`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } },
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    const item = data?.data?.[0];
+    return item?.state === 'Completed' ? item.imageUrl || null : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     if (!await isAuthorized(request)) {
@@ -66,6 +81,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'approve') {
       let robloxUserId = profile.roblox_user_id ? Number(profile.roblox_user_id) : null;
+      let robloxAvatarUrl = profile.roblox_avatar_url || null;
 
       if (!robloxUserId && profile.roblox_user) {
         // Resolver robloxUserId si estaba en null por reclamo
@@ -73,6 +89,10 @@ export async function POST(request: NextRequest) {
       }
 
       if (robloxUserId) {
+        if (!robloxAvatarUrl) {
+          robloxAvatarUrl = await fetchRobloxAvatar(robloxUserId);
+        }
+
         // 1. Buscar si hay otro usuario que tenga este roblox_user_id vinculado
         const { data: conflictedProfile } = await supabaseAdmin
           .from('profiles')
@@ -111,6 +131,7 @@ export async function POST(request: NextRequest) {
           link_status: 'approved',
           roblox_verified_at: new Date().toISOString(),
           roblox_user_id: robloxUserId, // Guardar el ID definitivo
+          roblox_avatar_url: robloxAvatarUrl,
           rejection_reason: null, // Limpiar justificación de reclamo
         })
         .eq('id', userId);

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Image, Film, Play } from 'lucide-react';
+import Image from 'next/image';
+import { Loader2, Image as ImageIcon, Film, Play } from 'lucide-react';
 
 interface Session {
   access_token: string;
@@ -30,7 +31,7 @@ interface Props {
   profile: Profile | null;
 }
 
-export default function MediaGrid({ session, profile }: Props) {
+export default function MediaGrid({}: Props) {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export default function MediaGrid({ session, profile }: Props) {
   }, []);
 
   useEffect(() => {
-    void fetchMedia();
+    queueMicrotask(() => void fetchMedia());
   }, [fetchMedia]);
 
   const handlePlay = (item: MediaItem) => {
@@ -107,8 +108,8 @@ export default function MediaGrid({ session, profile }: Props) {
         <div key={ownerName}>
           <div className="flex items-center gap-2.5 mb-2 px-1">
             {avatar ? (
-              <div className="w-6 h-6 rounded-full overflow-hidden border border-neutral-600 shrink-0">
-                <img src={avatar} alt={ownerName} className="w-full h-full object-cover" style={{ transform: 'scale(1.4)', transformOrigin: 'center 30%', objectPosition: 'center top' }} />
+              <div className="relative w-6 h-6 rounded-full overflow-hidden border border-neutral-600 shrink-0">
+                <Image src={avatar} alt={ownerName} fill sizes="24px" unoptimized className="w-full h-full object-cover" style={{ transform: 'scale(1.4)', transformOrigin: 'center 30%', objectPosition: 'center top' }} />
               </div>
             ) : (
               <span className="text-sm">🐣</span>
@@ -127,12 +128,12 @@ export default function MediaGrid({ session, profile }: Props) {
                 >
                   {/* Preview */}
                   {isImageAudio && item.image_url ? (
-                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover absolute inset-0" />
+                    <Image src={item.image_url} alt={item.name} fill sizes="(max-width: 640px) 50vw, 25vw" unoptimized className="w-full h-full object-cover absolute inset-0" />
                   ) : item.video_url ? (
                     <video src={item.video_url} className="w-full h-full object-cover absolute inset-0" muted />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-neutral-800">
-                      {isImageAudio ? <Image className="w-8 h-8 text-gray-600" /> : <Film className="w-8 h-8 text-gray-600" />}
+                       {isImageAudio ? <ImageIcon className="w-8 h-8 text-gray-600" /> : <Film className="w-8 h-8 text-gray-600" />}
                     </div>
                   )}
 

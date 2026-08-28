@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Obtener datos actuales del perfil para auditoría y validación
-    const { data: currentProfile, error: profileError } = await supabaseAdmin
+    const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('*')
       .eq('id', userId)
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Error al buscar el perfil del usuario.' }, { status: 500 });
     }
 
-    const updateData: any = {
+    const updateData: Record<string, string | number | boolean | null> = {
       id: userId,
       updated_at: new Date().toISOString(),
     };
@@ -242,12 +242,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Sincronizar con la tabla interview_history si se cambiaron los nombres de usuario
-    const historyUpdate: any = {};
+    const historyUpdate: Record<string, string | null> = {};
     if (robloxUsername !== undefined) {
-      historyUpdate.roblox_user = updateData.roblox_user;
+      historyUpdate.roblox_user = typeof updateData.roblox_user === 'string' ? updateData.roblox_user : null;
     }
     if (tiktokUsername !== undefined) {
-      historyUpdate.tiktok_user = updateData.tiktok_user;
+      historyUpdate.tiktok_user = typeof updateData.tiktok_user === 'string' ? updateData.tiktok_user : null;
     }
 
     if (Object.keys(historyUpdate).length > 0) {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Loader, AlertTriangle, Clock } from 'lucide-react';
 
@@ -348,9 +349,12 @@ export default function RobloxOnboarding({
                 >
                   <div className="bg-orange-50 border-4 border-black rounded-2xl p-4 text-center">
                     {displayData.avatarUrl ? (
-                      <img
+                      <Image
                         src={displayData.avatarUrl}
                         alt="Avatar"
+                        width={80}
+                        height={80}
+                        unoptimized
                         className="w-20 h-20 rounded-full mx-auto mb-3 object-cover border-3 border-black shadow-md"
                         style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }}
                       />

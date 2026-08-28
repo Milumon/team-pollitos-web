@@ -30,7 +30,11 @@ const getWeekStart = () => {
 const sortTopThree = (entries: AggregateEntry[]) => entries
   .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
   .slice(0, 3)
-  .map(({ fallbackAvatarUrl: _fallbackAvatarUrl, ...entry }) => entry);
+  .map((entry) => {
+    const { fallbackAvatarUrl, ...result } = entry;
+    void fallbackAvatarUrl;
+    return result;
+  });
 
 const buildLeaderboardMaps = (
   events: Array<{ user_id: string; sender_roblox_user: string | null; sender_avatar_url: string | null }>,

@@ -42,6 +42,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Código inválido o expirado.' }, { status: 404 });
   }
 
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .select('link_status')
+    .eq('id', account.user_id)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error('[Minecraft link verify profile]:', profileError.message);
+    return NextResponse.json({ error: 'No se pudo comprobar la aprobación del usuario.' }, { status: 500 });
+  }
+
+  if (profile?.link_status !== 'approved') {
+    return NextResponse.json({ error: 'El usuario todavía no es un Miembro Oficial aprobado.' }, { status: 403 });
+  }
+
   const { error: updateError } = await supabaseAdmin
     .from('minecraft_accounts')
     .update({ player_id: playerId, verified_at: new Date().toISOString(), status: 'approved', approved_at: new Date().toISOString(), link_code: null, link_code_hash: null, link_code_expires_at: null, updated_at: new Date().toISOString() })

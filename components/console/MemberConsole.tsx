@@ -1,15 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { Header } from '@/components/ui/Header';
-import { Button } from '@/components/ui/Button';
 import RobloxOnboarding from '@/components/RobloxOnboarding';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import {
   Volume2,
   Send,
@@ -22,12 +20,6 @@ import {
   LayoutDashboard,
   Settings,
   HelpCircle,
-  X,
-  Users,
-  Crown,
-  FileAudio,
-  Activity,
-  ExternalLink,
   Scissors,
   Trophy,
   Check,
@@ -35,8 +27,6 @@ import {
 } from 'lucide-react';
 import { soundManager } from '@/lib/sound';
 import { convertAudioToMp3 } from '@/lib/audioConverter';
-import MediaUploadForm from '@/components/console/MediaUploadForm';
-import MediaSubmissionsHistory from '@/components/console/MediaSubmissionsHistory';
 import MemberEffectsPanel from '@/components/console/MemberEffectsPanel';
 import MemberVoicePanel from '@/components/console/MemberVoicePanel';
 import dynamic from 'next/dynamic';
@@ -45,6 +35,11 @@ import { TikTokRankingConsole } from '@/components/tiktok-rankings/RankingViews'
 import { TikTokRankingHistory } from '@/components/tiktok-rankings/HistoryViews';
 import { MemberHomeView } from '@/components/console/routes/MemberHomeView';
 import { MemberSoundsView } from '@/components/console/routes/MemberSoundsView';
+import {
+  MEMBER_DISPLAY_NAME_INPUT_PATTERN,
+  MEMBER_DISPLAY_NAME_MAX_LENGTH,
+  MEMBER_DISPLAY_NAME_MIN_LENGTH,
+} from '@/lib/memberDisplayName';
 const AudioPreview = dynamic(() => import('@/components/ui/AudioPreview'), { ssr: false });
 
 type StoredRobloxProfile = {
@@ -149,8 +144,8 @@ function LeaderboardGrid({ leaderboards, loading, emptyLabel }: { leaderboards: 
                     <span className={`w-5 text-center font-black ${index === 0 ? 'text-[#FFC200] text-base' : 'text-gray-500 text-xs'}`}>
                       {index === 0 ? '👑' : `${index + 1}.`}
                     </span>
-                    <div className={`${index === 0 ? 'w-10 h-10 border-2 border-[#FFC200]' : 'w-7 h-7 border'} rounded-full overflow-hidden bg-[#35373d] shrink-0 flex items-center justify-center`}>
-                      {entry.avatarUrl ? <img src={entry.avatarUrl} alt={index === 0 ? `Avatar de ${entry.name}` : ''} className="w-full h-full object-cover" /> : <span className={index === 0 ? 'text-xl' : 'text-sm'}>🐣</span>}
+                    <div className={`relative ${index === 0 ? 'w-10 h-10 border-2 border-[#FFC200]' : 'w-7 h-7 border'} rounded-full overflow-hidden bg-[#35373d] shrink-0 flex items-center justify-center`}>
+                      {entry.avatarUrl ? <Image src={entry.avatarUrl} alt={index === 0 ? `Avatar de ${entry.name}` : ''} fill sizes="40px" unoptimized className="w-full h-full object-cover" /> : <span className={index === 0 ? 'text-xl' : 'text-sm'}>🐣</span>}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className={`truncate font-bold ${index === 0 ? 'text-[#FFC200] text-xs' : 'text-white text-[11px]'}`}>@{entry.name}</p>
@@ -166,20 +161,6 @@ function LeaderboardGrid({ leaderboards, loading, emptyLabel }: { leaderboards: 
     </div>
   );
 }
-
-const getSoundColor = (soundId: string) => {
-  switch (soundId) {
-    case 'risa': return { text: 'text-[#FFC200]', badge: 'bg-[#FFC200]/10 text-[#FFC200] border-[#FFC200]/20' };
-    case 'bocina': return { text: 'text-red-500', badge: 'bg-red-500/10 text-red-400 border-red-500/20' };
-    case 'grito': return { text: 'text-pink-500', badge: 'bg-pink-500/10 text-pink-400 border-pink-500/20' };
-    case 'aplausos': return { text: 'text-emerald-400', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
-    case 'suspenso': return { text: 'text-fuchsia-400', badge: 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20' };
-    case 'sorpresa': return { text: 'text-orange-500', badge: 'bg-orange-500/10 text-orange-400 border-orange-500/20' };
-    case 'fallo': return { text: 'text-slate-400', badge: 'bg-slate-500/10 text-slate-400 border-slate-500/20' };
-    case 'victoria': return { text: 'text-sky-400', badge: 'bg-sky-500/10 text-sky-400 border-sky-400/20' };
-    default: return { text: 'text-yellow-400', badge: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' };
-  }
-};
 
 type ConsoleTab = 'sounds' | 'tts' | 'animations' | 'feed' | 'dashboard' | 'rankings' | 'nickname' | 'settings' | 'help';
 type SoundType = 'audios' | 'multimedia' | 'videos';
@@ -197,7 +178,6 @@ const PANEL_TABS = [
 ];
 
 export default function MemberConsole({
-  children,
   panelMode = false,
 }: Readonly<{ children?: React.ReactNode; panelMode?: boolean }>) {
   const pathname = usePathname() || '';
@@ -249,8 +229,6 @@ export default function MemberConsole({
   const [editSoundPublic, setEditSoundPublic] = useState(true);
   const [savingSoundEdit, setSavingSoundEdit] = useState(false);
   const [loadingSounds, setLoadingSounds] = useState(true);
-  const [audioTrim, setAudioTrim] = useState<{ start: number; end: number } | null>(null);
-  const [showUploadForm, setShowUploadForm] = useState(false);
 
   // Sound edit — audio editing states
   const [editingSoundAudioEnabled, setEditingSoundAudioEnabled] = useState(false);
@@ -266,10 +244,10 @@ export default function MemberConsole({
   const [editVideoDuration, setEditVideoDuration] = useState(0);
 
   // Media state
-  const [mediaApproved, setMediaApproved] = useState<{ id: string; name: string; media_type: string; image_url?: string; audio_url?: string; video_url?: string; is_public?: boolean; owner_user_id?: string | null; cooldown_seconds?: number; profiles?: { roblox_user: string | null; roblox_display_name: string | null; roblox_avatar_url: string | null } | null }[]>([]);
-  const [mediaSubmissions, setMediaSubmissions] = useState<{ id: string; media_type: string; name: string; image_url: string | null; audio_url: string | null; video_url: string | null; is_public: boolean; status: string; rejection_reason: string | null; suggested_cooldown_seconds: number; created_at: string }[]>([]);
-  const [loadingMedia, setLoadingMedia] = useState(true);
-  const [loadingMediaSubs, setLoadingMediaSubs] = useState(false);
+  const [, setMediaApproved] = useState<{ id: string; name: string; media_type: string; image_url?: string; audio_url?: string; video_url?: string; is_public?: boolean; owner_user_id?: string | null; cooldown_seconds?: number; profiles?: { roblox_user: string | null; roblox_display_name: string | null; roblox_avatar_url: string | null } | null }[]>([]);
+  const [, setMediaSubmissions] = useState<{ id: string; media_type: string; name: string; image_url: string | null; audio_url: string | null; video_url: string | null; is_public: boolean; status: string; rejection_reason: string | null; suggested_cooldown_seconds: number; created_at: string }[]>([]);
+  const [, setLoadingMedia] = useState(true);
+  const [, setLoadingMediaSubs] = useState(false);
 
   // Stream Settings State
   const [streamSettings, setStreamSettings] = useState<StreamSettings | null>(null);
@@ -298,15 +276,15 @@ export default function MemberConsole({
   // Stream stats
   const [totalMembers, setTotalMembers] = useState(54);
   const [soundsToday, setSoundsToday] = useState(312);
-  const [viewers, setViewers] = useState(1248);
-  const [uptimeSeconds, setUptimeSeconds] = useState(10113); // ~2:48:33
+  const [, setViewers] = useState(1248);
+  const [, setUptimeSeconds] = useState(10113); // ~2:48:33
 
   // Nickname State
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const [newNickname, setNewNickname] = useState('');
   const [nicknameError, setNicknameError] = useState<string | null>(null);
   const [submittingNickname, setSubmittingNickname] = useState(false);
-  const [isBotAccount, setIsBotAccount] = useState(false);
+  const [, setIsBotAccount] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Error/Success state
@@ -321,16 +299,11 @@ export default function MemberConsole({
     rejection_reason: string | null; created_at: string;
   };
   const [mySubmissions, setMySubmissions] = useState<MySubmission[]>([]);
-  const [loadingMySubmissions, setLoadingMySubmissions] = useState(false);
-  const [myPrivateSounds, setMyPrivateSounds] = useState<{ id: string; name: string; url: string; cooldown_seconds?: number | null }[]>([]);
-  const [loadingMyPrivate, setLoadingMyPrivate] = useState(false);
+  const [, setLoadingMySubmissions] = useState(false);
+  const [, setMyPrivateSounds] = useState<{ id: string; name: string; url: string; cooldown_seconds?: number | null }[]>([]);
+  const [, setLoadingMyPrivate] = useState(false);
 
   // Audio upload form
-  const [audioName, setAudioName] = useState('');
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [audioCooldown, setAudioCooldown] = useState('0');
-  const [audioIsPublic, setAudioIsPublic] = useState(true);
-  const [submittingAudio, setSubmittingAudio] = useState(false);
   const [audioSubmitStatus, setAudioSubmitStatus] = useState<string | null>(null);
 
   // Anti-spam confirmation toggle (for kids safety)
@@ -419,21 +392,6 @@ export default function MemberConsole({
   const isCustomNickname = (displayName: string | null) => {
     return !!(displayName?.startsWith('🐣') && displayName?.endsWith('🐣'));
   };
-
-  // Helper to calculate cooldown
-  const getCooldownRemaining = useCallback((lastUpdatedStr: string | null | undefined) => {
-    if (!lastUpdatedStr) return null;
-    const lastUpdate = new Date(lastUpdatedStr).getTime();
-    const diff = Date.now() - lastUpdate;
-    const cooldown = 24 * 60 * 60 * 1000;
-    if (diff < cooldown) {
-      const remaining = cooldown - diff;
-      const hours = Math.floor(remaining / (1000 * 60 * 60));
-      const minutes = Math.ceil((remaining % (1000 * 60 * 60)) / (1000 * 60));
-      return { hours, minutes };
-    }
-    return null;
-  }, []);
 
   const handleNicknameSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -662,7 +620,7 @@ export default function MemberConsole({
     setPendingTrigger(null);
     setCustomImageMessage('');
     await triggerEvent(type, content, true, mediaUrls, extraFields);
-  }, [pendingTrigger, triggerEvent, customImageMessage, sendRepeatEnabled]);
+  }, [pendingTrigger, triggerEvent, customImageMessage]);
 
   const fetchSounds = async () => {
     try {
@@ -728,59 +686,6 @@ export default function MemberConsole({
       setLoadingMyPrivate(false);
     }
   }, []);
-
-  const handleSubmitAudio = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!session || !audioFile || !audioName.trim()) return;
-    if (profile && (profile as Record<string, unknown>).perm_upload_audio === false) {
-      setError('No tenés permiso para subir audio.');
-      return;
-    }
-    setSubmittingAudio(true);
-    setAudioSubmitStatus(null);
-    setError(null);
-    try {
-      let processedFile: File | Blob = audioFile;
-      if (audioFile.type !== 'audio/mpeg' && !audioFile.name.endsWith('.mp3')) {
-        setAudioSubmitStatus('Convirtiendo audio a MP3...');
-        processedFile = await convertAudioToMp3(audioFile, audioTrim?.start, audioTrim?.end);
-      } else if (audioTrim) {
-        setAudioSubmitStatus('Recortando audio...');
-        processedFile = await convertAudioToMp3(audioFile, audioTrim.start, audioTrim.end);
-      }
-
-      const formData = new FormData();
-      const ext = 'mp3';
-      const slug = audioName.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'audio';
-      formData.append('file', processedFile, `${slug}-${Date.now()}.${ext}`);
-      formData.append('name', audioName.trim());
-      formData.append('suggestedCooldown', audioCooldown);
-      formData.append('isPublic', String(audioIsPublic));
-
-      setAudioSubmitStatus('Subiendo audio...');
-      const response = await fetch('/api/console/sounds/submit', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: formData,
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Error al enviar el audio');
-
-      setAudioName('');
-      setAudioFile(null);
-      setAudioTrim(null);
-      setAudioCooldown('0');
-      setAudioIsPublic(true);
-      setAudioSubmitStatus('✓ Audio enviado para revisión. Te notificaremos cuando sea aprobado.');
-      setTimeout(() => setAudioSubmitStatus(null), 6000);
-      await loadMySubmissions(session);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al enviar el audio');
-      setTimeout(() => setError(null), 6000);
-    } finally {
-      setSubmittingAudio(false);
-    }
-  };
 
   const handleSaveSound = async () => {
     if (!editingSound || !editSoundName.trim()) return;
@@ -1221,21 +1126,11 @@ export default function MemberConsole({
 
   const isMuted = streamSettings?.is_muted;
 
-  const formatUptime = (totalSecs: number) => {
-    const hrs = Math.floor(totalSecs / 3600);
-    const mins = Math.floor((totalSecs % 3600) / 60);
-    const secs = totalSecs % 60;
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
   // Soundboard cooldown math
   const maxSoundCd = Math.min(60, streamSettings?.personal_cooldown_seconds ?? 60);
   const soundCooldownPercent = soundCooldown > 0 ? (soundCooldown / maxSoundCd) * 100 : 0;
 
   // Animation cooldown math
-  const maxAnimCd = Math.min(60, streamSettings?.personal_cooldown_seconds ?? 60);
-  const animCooldownPercent = animationCooldown > 0 ? (animationCooldown / maxAnimCd) * 100 : 0;
-
   return (
     <div className="h-screen w-screen bg-[#1e1f22] text-white font-sans flex flex-col overflow-hidden select-none">
 
@@ -1402,7 +1297,7 @@ export default function MemberConsole({
                   hasRecording={recordedBlob !== null}
                   recordDuration={recordDuration}
                   sendingVoice={sendingVoice}
-                  audioPreview={recordedFile ? <AudioPreview file={recordedFile} onTrimChange={(start, end) => setAudioTrim({ start, end })} /> : null}
+                   audioPreview={recordedFile ? <AudioPreview file={recordedFile} onTrimChange={() => {}} /> : null}
                   onModeChange={() => {}}
                   onTextChange={setTtsText}
                   onTextSubmit={handleTtsSubmit}
@@ -1475,16 +1370,16 @@ export default function MemberConsole({
                                           {index === 0 ? '👑' : `${index + 1}.`}
                                         </span>
                                         {index === 0 ? (
-                                          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#FFC200] bg-[#35373d] shrink-0 flex items-center justify-center">
+                                          <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-[#FFC200] bg-[#35373d] shrink-0 flex items-center justify-center">
                                             {entry.avatarUrl ? (
-                                              <img src={entry.avatarUrl} alt={`Avatar de ${entry.name}`} className="w-full h-full object-cover" />
+                                              <Image src={entry.avatarUrl} alt={`Avatar de ${entry.name}`} fill sizes="40px" unoptimized className="w-full h-full object-cover" />
                                             ) : (
                                               <span className="text-xl">🐣</span>
                                             )}
                                           </div>
                                         ) : (
-                                          <div className="w-7 h-7 rounded-full overflow-hidden border border-neutral-600 bg-[#35373d] shrink-0 flex items-center justify-center">
-                                            {entry.avatarUrl ? <img src={entry.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-sm">🐣</span>}
+                                          <div className="relative w-7 h-7 rounded-full overflow-hidden border border-neutral-600 bg-[#35373d] shrink-0 flex items-center justify-center">
+                                            {entry.avatarUrl ? <Image src={entry.avatarUrl} alt="" fill sizes="28px" unoptimized className="w-full h-full object-cover" /> : <span className="text-sm">🐣</span>}
                                           </div>
                                         )}
                                         <div className="min-w-0 flex-1">
@@ -1547,18 +1442,22 @@ export default function MemberConsole({
                             value={newNickname}
                             onChange={(e) => {
                               const val = e.target.value;
-                              if (val.length <= 15) {
+                              if (val.length <= MEMBER_DISPLAY_NAME_MAX_LENGTH) {
                                   setNewNickname(val);
                               }
                             }}
                             placeholder="Ej: Milumon"
+                            minLength={MEMBER_DISPLAY_NAME_MIN_LENGTH}
+                            maxLength={MEMBER_DISPLAY_NAME_MAX_LENGTH}
+                            pattern={MEMBER_DISPLAY_NAME_INPUT_PATTERN}
+                            title="Usa letras, números, espacios y, como máximo, un guion bajo en posición intermedia."
                             disabled={submittingNickname}
                             className="w-full bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-3 font-semibold text-sm outline-none focus:border-[#FFC200] focus:ring-1 focus:ring-[#FFC200] disabled:opacity-50 text-white placeholder-gray-500 "
                             required
                           />
                           <div className="flex justify-between text-[8px] font-mono text-gray-500">
-                            <span>Solo letras, números y espacios</span>
-                            <span>{newNickname.length}/15</span>
+                            <span>Letras, números, espacios y un _ intermedio</span>
+                            <span>{newNickname.length}/{MEMBER_DISPLAY_NAME_MAX_LENGTH}</span>
                           </div>
                         </div>
 
@@ -1578,7 +1477,7 @@ export default function MemberConsole({
 
                         <button
                           type="submit"
-                          disabled={submittingNickname || newNickname.trim().length < 3 || newNickname.trim().length > 15}
+                          disabled={submittingNickname || newNickname.trim().length < MEMBER_DISPLAY_NAME_MIN_LENGTH || newNickname.trim().length > MEMBER_DISPLAY_NAME_MAX_LENGTH}
                           className="w-full py-3.5 bg-[#FFC200] hover:brightness-105 text-black font-display font-semibold text-xs rounded-lg border border-neutral-700/60 transition-all flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(0,0,0,.3)] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
                           {submittingNickname ? (
@@ -1899,18 +1798,22 @@ export default function MemberConsole({
                     value={newNickname}
                     onChange={(e) => {
                       const val = e.target.value;
-                      if (val.length <= 15) {
+                      if (val.length <= MEMBER_DISPLAY_NAME_MAX_LENGTH) {
                         setNewNickname(val);
                       }
                     }}
                     placeholder="Ej: Milumon"
+                    minLength={MEMBER_DISPLAY_NAME_MIN_LENGTH}
+                    maxLength={MEMBER_DISPLAY_NAME_MAX_LENGTH}
+                    pattern={MEMBER_DISPLAY_NAME_INPUT_PATTERN}
+                    title="Usa letras, números, espacios y, como máximo, un guion bajo en posición intermedia."
                     disabled={submittingNickname}
                     className="w-full bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-3 font-semibold text-sm outline-none focus:border-[#FFC200] focus:ring-1 focus:ring-[#FFC200] text-white placeholder-gray-600 "
                     required
                   />
                   <div className="flex justify-between text-[8px] font-mono text-gray-500">
-                    <span>Solo letras, números y espacios</span>
-                    <span>{newNickname.length}/15</span>
+                    <span>Letras, números, espacios y un _ intermedio</span>
+                    <span>{newNickname.length}/{MEMBER_DISPLAY_NAME_MAX_LENGTH}</span>
                   </div>
                 </div>
 
@@ -1930,7 +1833,7 @@ export default function MemberConsole({
 
                 <button
                   type="submit"
-                  disabled={submittingNickname || newNickname.trim().length < 3 || newNickname.trim().length > 15}
+                  disabled={submittingNickname || newNickname.trim().length < MEMBER_DISPLAY_NAME_MIN_LENGTH || newNickname.trim().length > MEMBER_DISPLAY_NAME_MAX_LENGTH}
                   className="w-full py-3 bg-[#FFC200] hover:brightness-105 text-black font-display font-semibold text-xs rounded-lg border border-neutral-700/60 transition-all flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(0,0,0,.3)] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {submittingNickname ? (
@@ -2193,14 +2096,14 @@ export default function MemberConsole({
               {editingSound?.media_type === 'image' && editingSound?.image_url && (
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Vista previa de la imagen</label>
-                  <img src={editingSound.image_url} alt="Preview" className="w-full max-h-48 object-contain rounded-lg" />
+                  <Image src={editingSound.image_url} alt="Preview" width={640} height={192} unoptimized className="w-full max-h-48 object-contain rounded-lg" />
                 </div>
               )}
               {editingSound?.media_type === 'image_audio' && editingSound?.image_url && (
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Vista previa</label>
                   <div className="flex gap-2">
-                    <img src={editingSound.image_url} alt="Preview" className="w-1/2 max-h-40 object-contain rounded-lg" />
+                    <Image src={editingSound.image_url} alt="Preview" width={320} height={160} unoptimized className="w-1/2 max-h-40 object-contain rounded-lg" />
                     {editingSound.audio_url && <audio controls src={editingSound.audio_url} className="w-1/2" />}
                   </div>
                 </div>
@@ -2333,13 +2236,11 @@ export default function MemberConsole({
             <p className="text-white text-xs font-bold bg-black/60 px-3 py-1 rounded-full backdrop-blur-sm">{localTestOverlay.name}</p>
 
             {localTestOverlay.type === 'image' && localTestOverlay.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={localTestOverlay.image_url} alt="" className="max-w-[80vw] max-h-[70vh] object-contain rounded-xl shadow-2xl" />
+              <Image src={localTestOverlay.image_url} alt="" width={800} height={600} unoptimized className="max-w-[80vw] max-h-[70vh] object-contain rounded-xl shadow-2xl" />
             )}
 
             {localTestOverlay.type === 'image_audio' && localTestOverlay.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={localTestOverlay.image_url} alt="" className="max-w-[80vw] max-h-[70vh] object-contain rounded-xl shadow-2xl" />
+              <Image src={localTestOverlay.image_url} alt="" width={800} height={600} unoptimized className="max-w-[80vw] max-h-[70vh] object-contain rounded-xl shadow-2xl" />
             )}
 
             {localTestOverlay.type === 'video' && localTestOverlay.video_url && (

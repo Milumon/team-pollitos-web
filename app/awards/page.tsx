@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Volume2,
@@ -25,7 +26,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { buildAccessPath } from '@/lib/authRouting';
 import { Session } from '@supabase/supabase-js';
 import { Header } from '@/components/ui/Header';
-import { NavBar } from '@/components/ui/NavBar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -976,9 +976,12 @@ export default function LandingPage() {
                                     <div className="flex items-center gap-2.5">
                                       <div className="w-10 h-10 rounded-full overflow-hidden relative flex items-center justify-center bg-yellow-100 border border-black/10 shrink-0">
                                         {winner.profile_image_url ? (
-                                          <img
+                                          <Image
                                             src={winner.profile_image_url}
                                             alt={winner.nickname}
+                                            fill
+                                            sizes="40px"
+                                            unoptimized
                                             className="w-[38px] h-[38px] rounded-full object-cover"
                                           />
                                         ) : (
@@ -1030,9 +1033,12 @@ export default function LandingPage() {
                                             </span>
                                             <div className="w-6 h-6 rounded-full overflow-hidden relative flex items-center justify-center bg-gray-50 border border-black/5 shrink-0">
                                               {nominee.profile_image_url ? (
-                                                <img
+                                                <Image
                                                   src={nominee.profile_image_url}
                                                   alt={nominee.nickname}
+                                                  fill
+                                                  sizes="24px"
+                                                  unoptimized
                                                   className="w-6 h-6 rounded-full object-cover"
                                                 />
                                               ) : (
@@ -1319,9 +1325,12 @@ export default function LandingPage() {
                       className="w-24 h-24 relative mb-4 flex items-center justify-center shrink-0"
                     >
                       {robloxProfile?.avatarUrl ? (
-                        <img
+                        <Image
                           src={robloxProfile.avatarUrl}
                           alt={robloxProfile.displayName}
+                          fill
+                          sizes="96px"
+                          unoptimized
                           className="w-24 h-24 rounded-full border-4 border-black object-cover bg-[#FCF9F2]"
                           style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }}
                         />
@@ -1528,9 +1537,12 @@ export default function LandingPage() {
                                   <div className="absolute inset-0 bg-[#FFB000]/20 rounded-full animate-ping pointer-events-none" />
                                 )}
                                 {nominee.profileImageUrl ? (
-                                  <img
+                                  <Image
                                     src={nominee.profileImageUrl}
                                     alt={nominee.name}
+                                    fill
+                                    sizes="44px"
+                                    unoptimized
                                     className="w-[42px] h-[42px] md:w-[38px] md:h-[38px] rounded-full object-cover"
                                   />
                                 ) : (
@@ -1709,7 +1721,7 @@ export default function LandingPage() {
                   </div>
 
                   <div className="w-full mb-2 shrink-0">
-                    <ShareCard votes={votes} robloxProfile={robloxProfile} categories={categories} nominees={nominees} />
+                    <ShareCard votes={votes} robloxProfile={robloxProfile} nominees={nominees} />
                   </div>
 
                   {!timeLeft.isOver ? (

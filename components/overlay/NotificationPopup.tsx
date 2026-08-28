@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import type { OverlayEvent } from '@/components/OverlayCanvas';
 
 type NotificationPopupProps = {
@@ -64,9 +65,12 @@ export function NotificationPopup({
           style={{ width: `${avatarSize}px`, height: `${avatarSize}px` }}
           className="border border-[#e8a33d]/70 overflow-hidden shrink-0 mt-1.5"
         >
-          <img
+          <Image
             src={event.sender_avatar_url}
             alt={sender}
+            width={avatarSize}
+            height={avatarSize}
+            unoptimized
             className="w-full h-full object-cover"
             style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }}
           />

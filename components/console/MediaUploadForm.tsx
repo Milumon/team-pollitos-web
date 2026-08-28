@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Loader2, Image, Film, Upload, Mic, MicOff, Square, Volume2, Trash2 } from 'lucide-react';
+import Image from 'next/image';
+import { Loader2, Image as ImageIcon, Film, Upload, Mic, Square, Volume2 } from 'lucide-react';
 
 type MediaCategory = 'audio' | 'image_audio' | 'video' | 'image';
 type AudioSource = 'upload' | 'tts' | 'record';
@@ -18,9 +19,9 @@ interface Props {
 
 const CATEGORIES: { id: MediaCategory; label: string; icon: React.ReactNode; desc: string; disabled?: boolean }[] = [
   { id: 'audio', label: 'Audio', icon: <Volume2 className="w-4 h-4" />, desc: 'Subir un archivo de audio' },
-  { id: 'image_audio', label: 'Imagen + Audio', icon: <Image className="w-4 h-4" />, desc: 'Imagen con audio (subido, TTS o grabado)' },
+  { id: 'image_audio', label: 'Imagen + Audio', icon: <ImageIcon className="w-4 h-4" />, desc: 'Imagen con audio (subido, TTS o grabado)' },
   { id: 'video', label: 'Video', icon: <Film className="w-4 h-4" />, desc: 'Video corto (máx 15s)', disabled: true },
-  { id: 'image', label: 'Imagen', icon: <Image className="w-4 h-4" />, desc: 'Imagen o GIF sin audio' },
+  { id: 'image', label: 'Imagen', icon: <ImageIcon className="w-4 h-4" />, desc: 'Imagen o GIF sin audio' },
 ];
 
 export default function MediaUploadForm({ session, onSuccess, permissions }: Props) {
@@ -62,7 +63,6 @@ export default function MediaUploadForm({ session, onSuccess, permissions }: Pro
   const audioChunksRef = useRef<Blob[]>([]);
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordStartTimeRef = useRef(0);
-  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const reset = useCallback(() => {
     setName('');
@@ -329,12 +329,12 @@ export default function MediaUploadForm({ session, onSuccess, permissions }: Pro
                   onClick={() => imageRef.current?.click()}
                   className="w-full border border-dashed border-[#FFC200]/45 rounded-xl p-3 bg-[#35373d] hover:bg-[#3a3c42] cursor-pointer transition-colors text-center"
                 >
-                  <Image className="w-5 h-5 text-gray-500 mx-auto mb-1" />
+                 <ImageIcon className="w-5 h-5 text-gray-500 mx-auto mb-1" />
                   <p className="text-[9px] text-gray-400 font-medium truncate">{imageFile ? imageFile.name : 'Elegir imagen / GIF'}</p>
                 </button>
                 <input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
                 {imageFile && (
-                  <img src={URL.createObjectURL(imageFile)} alt="Preview" className="mt-2 w-full max-h-32 object-contain rounded-lg" />
+                  <Image src={URL.createObjectURL(imageFile)} alt="Preview" width={640} height={128} unoptimized className="mt-2 w-full max-h-32 object-contain rounded-lg" />
                 )}
               </div>
 
@@ -531,12 +531,12 @@ export default function MediaUploadForm({ session, onSuccess, permissions }: Pro
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Imagen / GIF</label>
               <button type="button" onClick={() => imageRef.current?.click()}
                 className="w-full border border-dashed border-[#FFC200]/45 rounded-xl p-4 bg-[#35373d] hover:bg-[#3a3c42] cursor-pointer transition-colors text-center">
-                <Image className="w-6 h-6 text-gray-500 mx-auto mb-1" />
+                 <ImageIcon className="w-6 h-6 text-gray-500 mx-auto mb-1" />
                 <p className="text-[10px] text-gray-400 font-medium truncate">{imageFile ? imageFile.name : 'Elegir imagen / GIF'}</p>
               </button>
               <input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
               {imageFile && (
-                <img src={URL.createObjectURL(imageFile)} alt="Preview" className="mt-2 w-full max-h-40 object-contain rounded-lg" />
+                <Image src={URL.createObjectURL(imageFile)} alt="Preview" width={640} height={160} unoptimized className="mt-2 w-full max-h-40 object-contain rounded-lg" />
               )}
             </div>
           )}

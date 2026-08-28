@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+import { isValidMemberDisplayName } from '@/lib/memberDisplayName';
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || '',
@@ -8,6 +10,7 @@ const supabaseAdmin = createClient(
 );
 
 let cachedBotId: number | null = null;
+const ROBLOX_NOT_FRIEND_MESSAGE = 'No tienes agregado a MilumonRT como amigo en Roblox. Agrégalo y vuelve a intentarlo.';
 
 async function getBotUserId(cookie: string): Promise<number | null> {
   if (cachedBotId) return cachedBotId;
@@ -88,6 +91,9 @@ async function setRobloxContactTag(
     if (!response.ok) {
       const text = await response.text();
       console.error(`Roblox API Error (${response.status}):`, text);
+      if (response.status === 403 && text.includes('"code":3') && text.toLowerCase().includes('not a friend')) {
+        return { success: false, error: ROBLOX_NOT_FRIEND_MESSAGE };
+      }
       return { success: false, error: `Error de Roblox (${response.status}): ${text || 'desconocido'}` };
     }
 
@@ -145,19 +151,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'El nombre no puede estar vacío.' }, { status: 400 });
     }
 
-    // Regex: solo alfanumérico y espacios simples
-    const nicknameRegex = /^[a-zA-Z0-9 ]+$/;
-    if (!nicknameRegex.test(nicknameInput)) {
+    if (!isValidMemberDisplayName(nicknameInput)) {
       return NextResponse.json(
-        { error: 'El nickname solo puede contener letras, números y espacios.' },
-        { status: 400 }
-      );
-    }
-
-    // Longitud: 3 a 15 caracteres
-    if (nicknameInput.length < 3 || nicknameInput.length > 15) {
-      return NextResponse.json(
-        { error: 'El nickname debe tener entre 3 y 15 caracteres.' },
+        { error: 'El nickname debe tener entre 3 y 15 caracteres y solo puede contener letras, números, espacios y un guion bajo en posición intermedia.' },
         { status: 400 }
       );
     }
@@ -215,8 +211,11 @@ export async function POST(request: NextRequest) {
     const robloxResult = await setRobloxContactTag(Number(profile.roblox_user_id), finalTag, cleanCookie);
 
     if (!robloxResult.success) {
+      const errorMessage = robloxResult.error === ROBLOX_NOT_FRIEND_MESSAGE
+        ? robloxResult.error
+        : `No se pudo actualizar tu tag en Roblox. Detalle: ${robloxResult.error || 'error desconocido.'}`;
       return NextResponse.json(
-        { error: `No se pudo actualizar tu tag en Roblox. Detalle: ${robloxResult.error || 'error desconocido.'}` },
+        { error: errorMessage },
         { status: 502 }
       );
     }

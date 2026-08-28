@@ -1,6 +1,6 @@
 # Integración Directa de la API de Roblox para Etiquetado de Amigos
 
-Decidimos implementar el flujo de etiquetado/des-etiquetado individual de cuentas en Roblox directamente dentro del backend de `team-pollito-awards` (monorepo unificado) a través de [lib/robloxAdmin.ts](file:///d:/GitHub/team-pollito-awards/lib/robloxAdmin.ts), en lugar de consumir microservicios externos o el proxy `roblox-alexa`.
+Decidimos implementar el flujo de etiquetado/des-etiquetado individual de cuentas en Roblox directamente dentro del backend de `team-pollitos-web` (monorepo unificado) a través de [lib/robloxAdmin.ts](file:///d:/GitHub/team-pollitos-web/lib/robloxAdmin.ts), en lugar de consumir microservicios externos o el proxy `roblox-alexa`.
 
 ## Contexto
 

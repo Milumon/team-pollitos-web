@@ -80,13 +80,18 @@ export default function AudioPreview({ file, onTrimChange, embedded = false }: A
   // Create object URL for the file
   useEffect(() => {
     const url = URL.createObjectURL(file);
-    setObjectUrl(url);
-    setPlaying(false);
-    setCurrentTime(0);
-    setTrimStart(0);
-    setTrimEnd(0);
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setObjectUrl(url);
+      setPlaying(false);
+      setCurrentTime(0);
+      setTrimStart(0);
+      setTrimEnd(0);
+    });
 
     return () => {
+      active = false;
       URL.revokeObjectURL(url);
     };
   }, [file]);
