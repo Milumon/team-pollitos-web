@@ -1,5 +1,6 @@
-import { Copy, Check, Sparkles } from 'lucide-react';
 'use client';
+
+import { Copy, Check, Sparkles } from 'lucide-react';
 
 import { FormEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Header } from '@/components/ui/Header';
