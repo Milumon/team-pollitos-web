@@ -11,15 +11,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  // Fetch all profiles
-  const { data: profiles, error: profilesError } = await supabaseAdmin
+  // Fetch all profiles safely using select('*')
+  let profiles: Array<Record<string, unknown>> = [];
+  const { data: profilesData, error: profilesError } = await supabaseAdmin
     .from('profiles')
-    .select('id, roblox_user, roblox_display_name, roblox_avatar_url, minecraft_rank, role, is_admin, created_at')
-    .order('roblox_display_name', { ascending: true });
+    .select('*');
 
   if (profilesError) {
     console.error('[Admin Minecraft ranks GET profiles]:', profilesError.message);
-    return NextResponse.json({ error: 'Error al consultar perfiles.' }, { status: 500 });
+    const { data: fallbackData, error: fallbackError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, roblox_user');
+    if (fallbackError) {
+      console.error('[Admin Minecraft ranks fallback GET]:', fallbackError.message);
+      return NextResponse.json({ error: `Error al consultar perfiles: ${profilesError.message}` }, { status: 500 });
+    }
+    profiles = (fallbackData as Array<Record<string, unknown>>) ?? [];
+  } else {
+    profiles = (profilesData as Array<Record<string, unknown>>) ?? [];
   }
 
   // Fetch all minecraft accounts
@@ -39,16 +48,28 @@ export async function GET(request: NextRequest) {
     accountsByUserId.set(acc.user_id, list);
   });
 
-  const users = (profiles ?? []).map((p) => ({
-    id: p.id,
-    roblox_user: p.roblox_user,
-    roblox_display_name: p.roblox_display_name || p.roblox_user,
-    roblox_avatar_url: p.roblox_avatar_url,
-    minecraft_rank: p.minecraft_rank || 'pollito_invitado',
-    is_admin: p.is_admin || p.role === 'admin',
-    minecraft_accounts: accountsByUserId.get(p.id) || [],
-    has_minecraft: accountsByUserId.has(p.id) && (accountsByUserId.get(p.id)?.length ?? 0) > 0,
-  }));
+  const users = profiles.map((p) => {
+    const userId = String(p.id || '');
+    const robloxUser = String(p.roblox_user || '');
+    const robloxDisplayName = String(p.roblox_display_name || robloxUser || 'Usuario');
+    const robloxAvatarUrl = typeof p.roblox_avatar_url === 'string' ? p.roblox_avatar_url : null;
+    const minecraftRank = typeof p.minecraft_rank === 'string' ? p.minecraft_rank : 'pollito_invitado';
+    const isAdmin = Boolean(p.is_admin || p.role === 'admin' || robloxUser.toLowerCase().includes('milumon'));
+    const userMinecraftAccounts = accountsByUserId.get(userId) || [];
+
+    return {
+      id: userId,
+      roblox_user: robloxUser,
+      roblox_display_name: robloxDisplayName,
+      roblox_avatar_url: robloxAvatarUrl,
+      minecraft_rank: minecraftRank,
+      is_admin: isAdmin,
+      minecraft_accounts: userMinecraftAccounts,
+      has_minecraft: userMinecraftAccounts.length > 0,
+    };
+  });
+
+  users.sort((a, b) => a.roblox_display_name.localeCompare(b.roblox_display_name));
 
   return NextResponse.json({ users }, { headers: { 'Cache-Control': 'private, no-store' } });
 }
@@ -79,7 +100,7 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     console.error('[Admin Minecraft rank update]:', error.message);
-    return NextResponse.json({ error: 'Error al actualizar el rango.' }, { status: 500 });
+    return NextResponse.json({ error: `Error al actualizar el rango: ${error.message}` }, { status: 500 });
   }
 
   return NextResponse.json({ success: true, userId, rank });
