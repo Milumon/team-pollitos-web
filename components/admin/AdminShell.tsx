@@ -19,6 +19,7 @@ const navigation = [
   { href: '/admin/votos', label: 'Votos', icon: '📊' },
   { href: '/admin/transmision', label: 'Transmisión', icon: '📺' },
   { href: '/admin/overlay', label: 'Overlay', icon: '🎨' },
+  { href: '/admin/chat-overlay', label: 'Chat TikTok', icon: '💬' },
   { href: '/admin/sonidos', label: 'Sonidos', icon: '🔊' },
   { href: '/admin/multimedia', label: 'Multimedia', icon: '🖼️' },
   { href: '/admin/estado-transmision', label: 'Estado de transmisión', icon: '📡' },

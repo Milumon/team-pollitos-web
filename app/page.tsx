@@ -19,6 +19,8 @@ import {
   LogIn,
 } from 'lucide-react';
 import { TikTokRankingLanding } from '@/components/tiktok-rankings/RankingViews';
+import { LiveBanner } from '@/components/landing/LiveBanner';
+import { TopFansPodium } from '@/components/landing/TopFansPodium';
 import { PwaInstallWidget, requestPwaInstall } from '@/components/PwaInstallWidget';
 
 import { supabase } from '@/lib/supabaseClient';
@@ -648,6 +650,7 @@ export default function ComunidadPage() {
           setIsMobileMenuOpen={setIsMobileMenuOpen}
           scrollToSection={scrollToSection}
         />
+        <LiveBanner />
 
         {/* Mobile Menu Panel */}
         <NavBar
@@ -768,6 +771,9 @@ export default function ComunidadPage() {
               </div>
             </div>
           </section>
+
+          {/* PODIO DE POLLITOS DESTACADOS */}
+          <div className="order-2"><TopFansPodium /></div>
 
           {/* JUEGA CON NOSOTROS */}
           <section className="order-3 space-y-6">
