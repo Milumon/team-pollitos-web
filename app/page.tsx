@@ -97,7 +97,7 @@ const getMemberRole = (username: string, member?: Member) => {
   if (username.toLowerCase().includes('milumon') || member?.minecraft_rank === 'pollito_admin') {
     return 'Admin 👑';
   }
-  if (member?.minecraft_rank === 'pollito_moderador' || member?.is_admin || member?.role === 'admin') {
+  if (member?.minecraft_rank === 'pollito_moderador') {
     return 'Moderador 🛡️';
   }
   if (member?.minecraft_rank === 'pollito_invitado') {
