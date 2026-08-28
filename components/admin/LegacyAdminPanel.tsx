@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable */
 import { AdminUsersList } from '@/components/admin/AdminUsersList';
+import { TikTokOperationsView } from '@/components/admin/TikTokOperationsView';
 /* eslint-disable react-hooks/preserve-manual-memoization, react-hooks/set-state-in-effect, react-hooks/refs, @typescript-eslint/no-explicit-any, @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -1690,9 +1691,9 @@ export default function LegacyAdminPanel({
     );
   };
 
-  const handleTiktokIdentityLink = async (identity: TikTokIdentityReview, profileId: string | null) => {
-    const reason = window.prompt('Motivo de la corrección del vínculo TikTok:');
-    if (reason === null || reason.trim().length < 3) return;
+  const handleTiktokIdentityLink = async (identity: TikTokIdentityReview, profileId: string | null, defaultReason?: string) => {
+    const reason = defaultReason || window.prompt('Motivo de la corrección del vínculo TikTok:', 'Vinculación de identidad');
+    if (!reason || reason.trim().length < 3) return;
     setUpdatingTiktokIdentity(identity.tiktok_id);
     try {
       const response = await apiFetch('/api/admin/tiktok/identities', {
@@ -3517,71 +3518,25 @@ export default function LegacyAdminPanel({
     </div>
   );
 
-  const renderTiktokOperations = () => {
-    const operations = tiktokOperations;
-    const latest = operations?.latest_import;
-    const approvedMembers = (stats?.users ?? []).filter((user) => user.linkStatus === 'approved');
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-500">Operaciones privadas</span>
-            <h1 className="font-display font-bold text-2xl text-white mt-1">Rankings TikTok</h1>
-            <p className="text-xs text-gray-400 mt-2 font-semibold">Estado de importaciones, identidades y activaciones. Los snapshots son inmutables.</p>
-          </div>
-          <button type="button" onClick={() => void loadTiktokOperations()} disabled={loadingTiktokOperations} className="px-3 py-2 bg-[#2b2d31] border border-neutral-700/60 rounded-xl text-xs font-bold text-gray-300 hover:text-white disabled:opacity-50">
-            <RefreshCw className={`w-3.5 h-3.5 inline mr-1.5 ${loadingTiktokOperations ? 'animate-spin' : ''}`} /> Actualizar
-          </button>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <section className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-4">
-            <p className="text-[10px] uppercase text-gray-500">Batch activo</p>
-            <p className="text-sm font-mono font-bold text-white mt-2 break-all">{operations?.active_batch?.batch_id ?? 'Sin snapshot'}</p>
-            <p className="text-[10px] text-gray-400 mt-2">{operations?.active_batch ? formatDate(operations.active_batch.captured_at) : 'Aún no hay publicación válida'}</p>
-          </section>
-          <section className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-4">
-            <p className="text-[10px] uppercase text-gray-500">Último intento</p>
-            <p className="text-lg font-mono font-black text-[#FFC200] mt-2">{latest ? `${latest.sets_validated}/8` : '—'}</p>
-            <p className="text-[10px] text-gray-400 mt-1">{latest ? `${latest.status} · ${formatDate(latest.created_at)}` : 'Sin intentos registrados'}</p>
-            {latest?.error_message && <p className="text-[10px] text-red-400 mt-2">{latest.error_message}</p>}
-          </section>
-          <section className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-4">
-            <p className="text-[10px] uppercase text-gray-500">Credencial de ingestión</p>
-            <p className={`text-sm font-bold mt-2 ${operations?.import_token_configured ? 'text-emerald-400' : 'text-red-400'}`}>{operations?.import_token_configured ? 'Configurada' : 'No configurada'}</p>
-            <p className="text-[10px] text-gray-400 mt-2">Nunca se muestra el token en el panel.</p>
-          </section>
-        </div>
-
-        <section className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-5 space-y-3">
-          <h2 className="font-display font-semibold text-lg text-white">Rotación y reconfiguración</h2>
-          <p className="text-xs text-gray-400 leading-relaxed">Define un nuevo <code className="text-[#FFC200]">TIKTOK_IMPORT_TOKEN</code> en el entorno del servidor y reinicia o redeploya la aplicación. Después actualiza el token en la configuración privada de la extensión y vuelve a probar una importación manual. El portal no permite consultar ni recuperar el valor anterior.</p>
-        </section>
-
-        <section className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-5 space-y-4">
-          <div><h2 className="font-display font-semibold text-lg text-white">Identidades TikTok</h2><p className="text-xs text-gray-400 mt-1">Las identidades pendientes aparecen primero, pero también puedes corregir vínculos automáticos. El cambio afecta el mapa efectivo, no los snapshots.</p></div>
-          {operations?.identities.length === 0 ? <p className="text-xs text-gray-500 py-5">No hay identidades importadas.</p> : (
-            <div className="space-y-3">
-              {(operations?.identities ?? []).map((identity) => (
-                <article key={identity.tiktok_id} className="bg-[#35373d] border border-neutral-700/40 rounded-xl p-3 flex flex-col gap-3 lg:flex-row lg:items-center">
-                  <div className="min-w-0 flex-1"><p className="text-xs font-bold text-white truncate">@{identity.display_id} <span className="text-gray-500 font-normal">({identity.tiktok_id})</span></p><p className="text-[10px] text-gray-400">{identity.nickname || 'Sin nickname'} · {identity.ranking_entry_count} entries · <span className={identity.status === 'ambiguous' ? 'text-amber-400' : 'text-red-400'}>{identity.status}</span></p></div>
-                  <div className="flex gap-2 w-full lg:w-auto"><select defaultValue="" disabled={updatingTiktokIdentity === identity.tiktok_id} onChange={(event) => { if (event.target.value) void handleTiktokIdentityLink(identity, event.target.value); }} className="flex-1 lg:w-64 bg-[#171A20] border border-neutral-700/60 rounded-xl px-3 py-2 text-xs text-white"><option value="">Seleccionar Miembro Oficial</option>{approvedMembers.map((member) => <option key={member.id} value={member.id}>{member.robloxDisplayName || member.robloxUser || member.email}{member.robloxUser ? ` (@${member.robloxUser})` : ''}</option>)}</select><button type="button" disabled={updatingTiktokIdentity === identity.tiktok_id} onClick={() => void handleTiktokIdentityLink(identity, null)} className="px-3 py-2 text-xs text-gray-300 border border-neutral-700/60 rounded-xl hover:text-white disabled:opacity-50">Dejar sin vincular</button></div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-5 space-y-3">
-          <h2 className="font-display font-semibold text-lg text-white">Historial y rollback</h2>
-          {(operations?.history ?? []).map((snapshot) => { const active = snapshot.batch_id === operations?.active_batch?.batch_id; return <article key={snapshot.batch_id} className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between border-b border-neutral-700/40 pb-3"><div><p className="text-xs font-mono text-white break-all">{snapshot.batch_id}</p><p className="text-[10px] text-gray-400">Capturado: {formatDate(snapshot.captured_at)} · {snapshot.activations.length} activación(es) {active && <span className="text-emerald-400">· ACTIVO</span>}</p></div><button type="button" disabled={active || rollingBackTiktok === snapshot.batch_id} onClick={() => void handleTiktokRollback(snapshot.batch_id)} className="px-3 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold disabled:opacity-40">{rollingBackTiktok === snapshot.batch_id ? 'Reactivando...' : 'Rollback con motivo'}</button></article>; })}
-          {(operations?.history.length ?? 0) === 0 && <p className="text-xs text-gray-500 py-5">No hay batches completos publicados.</p>}
-        </section>
-
-        <section className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-5"><h2 className="font-display font-semibold text-lg text-white mb-3">Intentos recientes</h2><div className="space-y-2">{(operations?.import_attempts ?? []).map((attempt) => <div key={attempt.id} className="flex items-center gap-3 text-xs"><span className={`font-mono font-bold ${attempt.sets_validated === 8 ? 'text-emerald-400' : 'text-red-400'}`}>{attempt.sets_validated}/8</span><span className="text-gray-300">{attempt.status}</span><span className="text-gray-500 ml-auto">{formatDate(attempt.created_at)}</span></div>)}</div></section>
-      </div>
-    );
-  };
+  const renderTiktokOperations = () => (
+    <TikTokOperationsView
+      operations={tiktokOperations}
+      loading={loadingTiktokOperations}
+      onRefresh={loadTiktokOperations}
+      onLinkIdentity={handleTiktokIdentityLink}
+      onRollback={handleTiktokRollback}
+      updatingIdentityId={updatingTiktokIdentity}
+      rollingBackBatchId={rollingBackTiktok}
+      members={(stats?.users ?? []).filter((u) => u.linkStatus === 'approved').map((u) => ({
+        id: u.id,
+        email: u.email,
+        robloxUser: u.robloxUser,
+        robloxDisplayName: u.robloxDisplayName,
+        robloxAvatarUrl: u.robloxAvatarUrl,
+      }))}
+      formatDate={(val) => val ? formatDate(val) : 'Sin fecha'}
+    />
+  );
 
   const renderActiveTabContent = () => {
     switch (view) {
