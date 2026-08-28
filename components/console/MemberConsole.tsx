@@ -200,7 +200,7 @@ export default function MemberConsole({
   children,
   panelMode = false,
 }: Readonly<{ children?: React.ReactNode; panelMode?: boolean }>) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const searchParams = useSearchParams();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -362,14 +362,14 @@ export default function MemberConsole({
                     : pathname === '/panel/ayuda'
                       ? 'help'
                       : 'sounds') as ConsoleTab;
-  const requestedSoundType = searchParams.get('tipo');
+  const requestedSoundType = searchParams?.get('tipo');
   const routedSoundType: SoundType =
     requestedSoundType === 'multimedia' || requestedSoundType === 'videos'
       ? requestedSoundType
       : 'audios';
   const displayedTab: ConsoleTab = routedTab;
   const displayedSoundType = routedSoundType;
-  const routedTtsMode = searchParams.get('modo') === 'grabacion' ? 'voice' : 'text';
+  const routedTtsMode = searchParams?.get('modo') === 'grabacion' ? 'voice' : 'text';
   const displayedTtsMode = routedTtsMode;
 
 

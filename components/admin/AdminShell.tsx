@@ -46,7 +46,7 @@ export function AdminShell({
   adminEmail,
   children,
 }: Readonly<{ adminEmail: string; children: React.ReactNode }>) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (legacyShellRoutes.has(pathname)) {

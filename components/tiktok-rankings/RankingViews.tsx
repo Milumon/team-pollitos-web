@@ -370,8 +370,8 @@ export function TikTokRankingPublicPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metric, period } = parsePublicRankingFilters({
-    metrica: searchParams.get('metrica'),
-    periodo: searchParams.get('periodo'),
+    metrica: searchParams?.get('metrica'),
+    periodo: searchParams?.get('periodo'),
   });
   const selected = findSet(state.data, metric, period);
 

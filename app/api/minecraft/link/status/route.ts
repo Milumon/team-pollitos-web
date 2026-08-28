@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('minecraft_accounts')
-    .select('status, verified_at')
+    .select('status, verified_at, user_id')
     .eq('edition', edition)
     .or(`player_id.eq.${playerId},username.ilike.${username}`)
     .limit(1)
@@ -28,8 +28,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No se pudo consultar la verificación.' }, { status: 500 });
   }
 
+  let nickname: string | null = null;
+  if (data?.user_id) {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('roblox_display_name')
+      .eq('id', data.user_id)
+      .maybeSingle();
+    nickname = profile?.roblox_display_name?.trim() || null;
+  }
+
   return NextResponse.json({
     requested: Boolean(data),
     verified: Boolean(data?.verified_at && data.status === 'approved'),
+    nickname,
   });
 }

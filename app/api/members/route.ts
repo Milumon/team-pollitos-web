@@ -1,19 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+export const dynamic = 'force-dynamic';
 
-// GET /api/members - Obtener lista de miembros oficiales aprobados
+// GET /api/members - Obtener lista de miembros oficiales y admins
 export async function GET() {
   try {
     const { data: members, error } = await supabaseAdmin
       .from('profiles')
-      .select('roblox_user, roblox_display_name, roblox_avatar_url')
+      .select('roblox_user, roblox_display_name, roblox_avatar_url, minecraft_rank, role, is_admin')
       .eq('link_status', 'approved')
+      .neq('minecraft_rank', 'pollito_invitado')
       .order('roblox_display_name', { ascending: true });
 
     if (error) {

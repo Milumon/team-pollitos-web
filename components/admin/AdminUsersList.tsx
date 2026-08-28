@@ -14,11 +14,11 @@ const focusClassName = 'focus-visible:outline-none focus-visible:ring-2 focus-vi
 
 export function AdminUsersList() {
   const { users, loading, error, refresh } = useAdminUsers();
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const searchParams = useSearchParams();
-  const search = searchParams.get('busqueda') || '';
+  const search = searchParams?.get('busqueda') || '';
   const deferredSearch = useDeferredValue(search);
-  const requestedPage = Number(searchParams.get('pagina'));
+  const requestedPage = Number(searchParams?.get('pagina'));
   const [actionError, setActionError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -37,7 +37,7 @@ export function AdminUsersList() {
   const visibleUsers = filteredUsers.slice((page - 1) * USERS_PER_PAGE, page * USERS_PER_PAGE);
 
   const navigateToPage = (nextPage: number) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
     if (nextPage > 1) params.set('pagina', String(nextPage));
     else params.delete('pagina');
     const query = params.toString();

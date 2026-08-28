@@ -36,6 +36,9 @@ type Member = {
   roblox_user: string;
   roblox_display_name: string;
   roblox_avatar_url: string | null;
+  minecraft_rank?: string;
+  role?: string;
+  is_admin?: boolean;
 };
 
 type Slot = {
@@ -78,9 +81,10 @@ const ROBLOX_COMMUNITY_URL = 'https://www.roblox.com/es/communities/994126945/MI
 const ROBLOX_SHIRT_URL = 'https://www.roblox.com/es/catalog/75919610314518/Camiseta-Team-Pollito';
 
 // Roles estáticos mapeados por Roblox username
-const getMemberRole = (username: string) => {
-  const name = username.toLowerCase().replace('@', '').trim();
-  if (name.includes('milumon')) return 'Admin 🐣';
+const getMemberRole = (username: string, member?: Member) => {
+  if (member?.is_admin || member?.role === 'admin' || member?.minecraft_rank === 'pollito_admin' || username.toLowerCase().includes('milumon')) {
+    return 'Admin 🐣';
+  }
   return 'Pollito Oficial 🐣';
 };
 
@@ -167,6 +171,7 @@ export default function ComunidadPage() {
   const [returnReason, setReturnReason] = useState('');
   const [selectedSlotId, setSelectedSlotId] = useState('');
   const [alreadyInterviewed, setAlreadyInterviewed] = useState(false);
+  const [memberType, setMemberType] = useState<"pollito_invitado" | "pollito_oficial">("pollito_invitado");
   const [verifiedRobloxProfile, setVerifiedRobloxProfile] = useState<VerifiedRobloxProfile | null>(null);
   const [robloxProfileConfirmed, setRobloxProfileConfirmed] = useState(false);
   const [verifyingRoblox, setVerifyingRoblox] = useState(false);
@@ -384,10 +389,7 @@ export default function ComunidadPage() {
     e.preventDefault();
     setFormError(null);
 
-    if (!alreadyInterviewed && !selectedSlotId) {
-      setFormError('Por favor selecciona un horario para tu entrevista.');
-      return;
-    }
+    // No slot required in new membership flow
     if (!robloxUser.trim()) {
       setFormError('El nombre de usuario de Roblox es obligatorio.');
       return;
@@ -415,14 +417,14 @@ export default function ComunidadPage() {
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          slotId: alreadyInterviewed ? null : selectedSlotId,
+          memberType,
           robloxUsername: robloxUser.trim(),
           tiktokUsername: tiktokUser.trim(),
           isReturning,
           banReason: isReturning ? banReason.trim() : null,
           returnReason: isReturning ? returnReason.trim() : null,
           testimonial: userTestimonial.trim() || null,
-          alreadyInterviewed,
+          alreadyInterviewed: memberType === 'pollito_oficial',
           forceClaim,
           claimReason: forceClaim ? claimReason.trim() : null
         })
@@ -971,28 +973,28 @@ export default function ComunidadPage() {
                   </div>
                 )}
 
-                {/* THE INTERACTIVE CALENDAR FOR BOOKING */}
+                {/* THE MEMBERSHIP REGISTRATION FORM */}
                 {session && !loadingStatus && showBookingForm && (
                   <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,.06)] space-y-4">
                     
                     <div className="border-b border-gray-100 pb-3 text-left">
                       <h3 className="font-display font-bold text-sm flex items-center gap-1.5 text-[#2D3139]">
-                        📅 Entrevistas de Admisión
+                        🐣 Unirse a la Comunidad
                       </h3>
-                      <p className="font-sans text-xs text-gray-400 mt-0.5">Todos los viernes</p>
+                      <p className="font-sans text-xs text-gray-400 mt-0.5">Elige tu tipo de membresía para ingresar</p>
                     </div>
-
-                    <p className="font-sans text-xs text-gray-600 leading-relaxed text-left border-b border-black/10 pb-2">
-                      Agenda tu entrevista para conocer al equipo y formar parte de la comunidad.
-                    </p>
 
                     {formSuccess && (
                       <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-center space-y-2 text-emerald-700">
                         <Check className="w-7 h-7 text-emerald-500 mx-auto" />
-                        <p className="font-display font-semibold text-sm">¡Reservado!</p>
-                        <p className="font-sans text-sm text-emerald-600">Tu entrevista fue registrada.</p>
+                        <p className="font-display font-semibold text-sm">¡Registro completado!</p>
+                        <p className="font-sans text-sm text-emerald-600">
+                          {memberType === 'pollito_oficial'
+                            ? 'Tu solicitud de Pollito Oficial está en revisión por un Administrador.'
+                            : '¡Ya eres Pollito Invitado! Tu acceso a la comunidad y Minecraft está activo.'}
+                        </p>
                         <button 
-                          onClick={() => { setFormSuccess(false); setSelectedDate(null); setSelectedSlotId(''); }} 
+                          onClick={() => { setFormSuccess(false); }} 
                           className="font-display font-bold text-[10px] underline cursor-pointer block mx-auto text-[#2D3139]"
                         >
                           VOLVER
@@ -1001,509 +1003,241 @@ export default function ComunidadPage() {
                     )}
 
                     {!formSuccess && (
-                      <div>
-                        {/* Opción para saltar el calendario si ya fue entrevistado */}
-                        <div className="flex items-center gap-2 bg-[#FCF9F2] border border-amber-200 rounded-xl p-3 text-left mb-4">
-                          <input
-                            type="checkbox"
-                            id="already-interviewed"
-                            checked={alreadyInterviewed}
-                            onChange={(e) => {
-                              setAlreadyInterviewed(e.target.checked);
-                              if (e.target.checked) {
-                                setSelectedSlotId('already-interviewed-temp');
-                              } else {
-                                setSelectedSlotId('');
-                              }
-                            }}
-                            className="w-4 h-4 accent-[#FFC200] cursor-pointer"
-                          />
-                          <label htmlFor="already-interviewed" className="text-xs text-[#2D3139] font-medium cursor-pointer select-none">
-                            Ya pasé mi entrevista en el directo de Milumon (Vincular directamente)
-                          </label>
+                      <form onSubmit={handleBook} className="space-y-4">
+                        {/* Selector de tipo de miembro */}
+                        <div className="space-y-1.5 text-left">
+                          <label className="block text-xs font-sans font-bold text-gray-700">¿Qué tipo de miembro eres?</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => setMemberType('pollito_invitado')}
+                              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                memberType === 'pollito_invitado'
+                                  ? 'bg-[#FFF9E6] border-[#FFC200] ring-2 ring-[#FFC200]/40 shadow-sm'
+                                  : 'bg-white border-gray-200 hover:bg-gray-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className="font-display font-bold text-sm text-[#2D3139]">🐣 Pollito Invitado</span>
+                                <span className="text-xs">{memberType === 'pollito_invitado' ? '✔' : ''}</span>
+                              </div>
+                              <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                                Acceso directo para jugar en la comunidad y Minecraft.
+                              </p>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setMemberType('pollito_oficial')}
+                              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                memberType === 'pollito_oficial'
+                                  ? 'bg-[#E8F8F0] border-emerald-500 ring-2 ring-emerald-500/40 shadow-sm'
+                                  : 'bg-white border-gray-200 hover:bg-gray-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className="font-display font-bold text-sm text-emerald-800">👑 Pollito Oficial</span>
+                                <span className="text-xs text-emerald-600">{memberType === 'pollito_oficial' ? '✔' : ''}</span>
+                              </div>
+                              <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                                Ya pasé mi entrevista en directo con Milumon.
+                              </p>
+                            </button>
+                          </div>
                         </div>
 
-                        {!alreadyInterviewed ? (
+                        {/* Nuevo / Reingreso */}
+                        <div className="flex border border-gray-200 rounded-xl overflow-hidden text-center text-sm font-display font-semibold">
+                          <button
+                            type="button"
+                            onClick={() => { setIsReturning(false); setFormError(null); }}
+                            className={`flex-grow py-1.5 ${!isReturning ? 'bg-[#FFC200] text-black' : 'bg-gray-50 text-gray-400'}`}
+                          >
+                            Nuevo
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setIsReturning(true); setFormError(null); }}
+                            className={`flex-grow py-1.5 border-l border-gray-200 ${isReturning ? 'bg-red-500 text-white' : 'bg-gray-50 text-gray-400'}`}
+                          >
+                            Re-Ingreso
+                          </button>
+                        </div>
+
+                        <div className="space-y-2 text-left">
                           <div>
-                        {/* Calendar Month Header */}
-                        <div className="flex justify-between items-center font-sans text-sm px-2 mb-3 text-gray-500">
-                          <span className="font-semibold">&lt;</span>
-                          <span className="font-display font-bold text-[#2D3139]">{monthName} {currentYear}</span>
-                          <span className="font-semibold">&gt;</span>
-                        </div>
-
-                        {/* Calendar Grid */}
-                        <div className="grid grid-cols-7 gap-1 text-center font-sans text-[10px] font-bold text-gray-500 uppercase mb-2 border-b border-black/10 pb-1">
-                          <div>Lun</div>
-                          <div>Mar</div>
-                          <div>Mié</div>
-                          <div>Jue</div>
-                          <div>Vie</div>
-                          <div>Sáb</div>
-                          <div>Dom</div>
-                        </div>
-                        
-                        <div className="grid grid-cols-7 gap-1.5">
-                          {calendarCells.map((cell, idx) => {
-                            if (!cell) {
-                              return <div key={`empty-${idx}`} className="aspect-square" />;
-                            }
-                            
-                            const cellDateStr = `${cell.getFullYear()}-${String(cell.getMonth() + 1).padStart(2, '0')}-${String(cell.getDate()).padStart(2, '0')}`;
-                            const cellSlots = slots.filter(s => s.slot_date === cellDateStr);
-                            const hasSlots = cellSlots.length > 0;
-                            const isFriday = cell.getDay() === 5;
-                            const isSelected = selectedDate && selectedDate.getDate() === cell.getDate();
-
-                            let cellBg = 'bg-white hover:bg-[#FCF9F2]';
-                            let cellText = 'text-[#2D3139]';
-                            let cellBorder = 'border-3 border-black';
-                            
-                            if (isFriday) {
-                              cellBg = 'bg-[#FFF9E6] hover:bg-[#FFF0C0]';
-                              cellBorder = 'border border-[#FFC200]/30';
-                              if (hasSlots) {
-                                cellBg = 'bg-[#FFC200] hover:brightness-105 text-black';
-                                cellBorder = 'border border-[#FFC200]';
-                              }
-                            }
-                            
-                            if (isSelected) {
-                              cellBg = 'bg-[#FFC200] text-black';
-                              cellBorder = 'border border-[#FFC200]';
-                              cellText = 'text-black';
-                            }
-
-                            return (
-                              <button
-                                key={`day-${cell.getDate()}`}
-                                type="button"
-                                disabled={!hasSlots}
-                                onClick={() => {
-                                  setSelectedDate(cell);
-                                  setSelectedSlotId(''); // reset slots
-                                }}
-                                className={`aspect-square rounded-xl flex flex-col items-center justify-center font-display font-bold text-xs transition-all ${cellBg} ${cellText} ${cellBorder} ${hasSlots ? 'cursor-pointer' : 'opacity-30 cursor-default'}`}
-                              >
-                                <span>{cell.getDate()}</span>
-                                {hasSlots && (
-                                  <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-black' : 'bg-white'}`} />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-2 mt-4">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedSlotId('admission-help');
-                              setShowHowItWorks(prev => !prev);
-                            }}
-                            className="w-full py-2.5 bg-[#FFC200] hover:brightness-105 text-black font-display font-semibold text-sm rounded-xl transition-all cursor-pointer active:scale-[0.97]"
-                          >
-                            Agendar entrevista
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowHowItWorks(prev => !prev);
-                            }}
-                            className="px-4 py-2.5 bg-white hover:bg-gray-50 text-[#2D3139] border border-gray-200 font-display font-semibold text-sm rounded-xl transition-all cursor-pointer"
-                          >
-                            Cómo funciona
-                          </button>
-                        </div>
-
-                        {/* How it works modal details */}
-                        {showHowItWorks && (
-                          <div className="bg-[#FCF9F2] border-3 border-black p-3.5 rounded-2xl text-left font-sans text-xs mt-3 space-y-1.5 leading-snug shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-                            <p className="font-display font-bold text-[#FFB000]">💡 GUÍA RÁPIDA:</p>
-                            <p>1. Selecciona un día viernes resaltado en amarillo en el calendario.</p>
-                            <p>2. Elige una de las horas libres listadas abajo.</p>
-                            <p>3. Completa tus nombres reales de Roblox y TikTok.</p>
-                            <p>4. Conéctate el día acordado al directo de Milumon en TikTok para tu charla 1:1.</p>
-                          </div>
-                        )}
-
-                        {/* Slots and booking forms */}
-                        {selectedDate && (
-                          <div className="mt-4 space-y-4 pt-4 border-t border-dashed border-gray-200">
-                            <p className="font-sans text-[10px] font-bold uppercase text-gray-500 text-left">
-                              Horarios disponibles ({activeDateSlots.length}):
-                            </p>
-                            
-                            {activeDateSlots.length === 0 ? (
-                              <p className="font-sans text-xs font-bold text-red-600 text-left">No hay horarios libres para esta fecha.</p>
-                            ) : (
-                              <div className="flex flex-wrap gap-2">
-                                {activeDateSlots.map(s => {
-                                  const isSel = selectedSlotId === s.id;
-                                  return (
-                                    <button
-                                      key={s.id}
-                                      type="button"
-                                      onClick={() => setSelectedSlotId(s.id)}
-                                      className={`px-3 py-1.5 rounded-lg border font-display font-semibold text-sm transition-all cursor-pointer ${isSel ? 'bg-[#FFC200] text-black border-[#FFC200]' : 'bg-white hover:bg-gray-50 text-[#2D3139] border-gray-200'}`}
-                                    >
-                                      {formatTime(s.slot_time)}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-
-                            {selectedSlotId && selectedSlotId !== 'admission-help' && (
-                              <form onSubmit={handleBook} className="space-y-4 pt-2">
-                                <div className="flex border border-gray-200 rounded-xl overflow-hidden text-center text-sm font-display font-semibold">
-                                  <button
-                                    type="button"
-                                    onClick={() => { setIsReturning(false); setFormError(null); }}
-                                    className={`flex-grow py-1.5 ${!isReturning ? 'bg-[#FFC200] text-black' : 'bg-gray-50 text-gray-400'}`}
-                                  >
-                                    Nuevo
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => { setIsReturning(true); setFormError(null); }}
-                                    className={`flex-grow py-1.5 border-l border-gray-200 ${isReturning ? 'bg-red-500 text-white' : 'bg-gray-50 text-gray-400'}`}
-                                  >
-                                    Re-Ingreso
-                                  </button>
-                                </div>
-
-                                  <div className="space-y-2 text-left">
-                                    <div>
-                                      <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">Usuario Roblox</label>
-                                      <div className="flex gap-2">
-                                        <input
-                                          type="text"
-                                          value={robloxUser}
-                                          onChange={(e) => {
-                                            setRobloxUser(e.target.value);
-                                            resetRobloxVerification();
-                                          }}
-                                          placeholder="Ej: MilumonRoblox"
-                                          className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
-                                        />
-                                        <button
-                                          type="button"
-                                          disabled={verifyingRoblox || !robloxUser.trim()}
-                                          onClick={handleVerifyRobloxForInterview}
-                                          className="px-4 py-2 bg-[#2b2d31] hover:bg-neutral-800 text-white font-display font-semibold text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer shrink-0"
-                                        >
-                                          {verifyingRoblox ? 'Validando...' : 'Validar'}
-                                        </button>
-                                      </div>
-                                    </div>
-                                    {isDuplicate && (
-                                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
-                                        <p className="text-xs text-amber-800 font-sans font-medium">
-                                          Esta cuenta ya está vinculada al correo <span className="font-semibold">{conflictedEmail}</span>. ¿Es tu cuenta de Roblox pero perdiste acceso a tu correo anterior?
-                                        </p>
-                                        <label className="flex items-center gap-2 text-xs font-semibold text-amber-900 cursor-pointer">
-                                          <input
-                                            type="checkbox"
-                                            checked={forceClaim}
-                                            onChange={(e) => {
-                                              setForceClaim(e.target.checked);
-                                              if (e.target.checked) {
-                                                setFormError(null);
-                                              }
-                                            }}
-                                            className="rounded text-[#FFC200] focus:ring-[#FFC200]/30"
-                                          />
-                                          Solicitar vinculación de todas formas
-                                        </label>
-                                        {forceClaim && (
-                                          <div className="mt-2">
-                                            <label className="block text-[10px] font-sans font-semibold text-amber-800 mb-0.5">Explicación del reclamo (opcional)</label>
-                                            <textarea
-                                              value={claimReason}
-                                              onChange={(e) => setClaimReason(e.target.value)}
-                                              placeholder="Ej: Perdí mi correo anterior o cambié de cuenta principal"
-                                              rows={2}
-                                              className="w-full px-2 py-1 bg-white border border-amber-200 rounded-lg font-sans text-xs focus:outline-none text-gray-800"
-                                            />
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                    <div>
-                                      <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">Usuario TikTok</label>
-                                      <input
-                                        type="text"
-                                        value={tiktokUser}
-                                        onChange={(e) => setTiktokUser(e.target.value)}
-                                        placeholder="Ej: @Milumon"
-                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
-                                      />
-                                    </div>
-                                    {verifiedRobloxProfile && (
-                                      <div className={`rounded-xl border p-3 ${robloxProfileConfirmed ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
-                                        <div className="flex items-center gap-3">
-                                          {verifiedRobloxProfile.avatarUrl ? (
-                                            <img
-                                              src={verifiedRobloxProfile.avatarUrl}
-                                              alt={verifiedRobloxProfile.displayName}
-                                              className="w-14 h-14 rounded-xl object-cover border border-white"
-                                              style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }}
-                                            />
-                                          ) : (
-                                            <div className="w-14 h-14 rounded-xl bg-white border border-amber-100 flex items-center justify-center text-2xl">
-                                              🐣
-                                            </div>
-                                          )}
-                                          <div className="min-w-0 flex-1">
-                                            <p className="font-display font-semibold text-sm text-[#2D3139] truncate">
-                                              {verifiedRobloxProfile.displayName}
-                                            </p>
-                                            <p className="font-sans text-xs text-gray-500 truncate">
-                                              @{verifiedRobloxProfile.username} · ID {verifiedRobloxProfile.id}
-                                            </p>
-                                            <p className={`font-sans text-[11px] font-semibold mt-1 ${robloxProfileConfirmed ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                              {robloxProfileConfirmed ? 'Perfil confirmado' : 'Confirma que este es tu perfil de Roblox'}
-                                            </p>
-                                          </div>
-                                        </div>
-
-                                        {!robloxProfileConfirmed && (
-                                          <div className="grid grid-cols-2 gap-2 mt-3">
-                                            <button
-                                              type="button"
-                                              onClick={resetRobloxVerification}
-                                              className="py-2 bg-white hover:bg-gray-50 text-[#2D3139] border border-gray-200 font-display font-semibold text-xs rounded-xl transition-all cursor-pointer"
-                                            >
-                                              Editar usuario
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                setRobloxProfileConfirmed(true);
-                                                setFormError(null);
-                                              }}
-                                              className="py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-display font-semibold text-xs rounded-xl transition-all cursor-pointer"
-                                            >
-                                              Sí, es mi perfil
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                    <div>
-                                      <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">Opinión (opcional)</label>
-                                      <textarea
-                                        value={userTestimonial}
-                                        onChange={(e) => setUserTestimonial(e.target.value.substring(0, 150))}
-                                        placeholder="Cuéntanos brevemente qué opinas del Team (Máx. 150 caracteres)"
-                                        rows={2}
-                                        maxLength={150}
-                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
-                                      />
-                                    </div>
-
-                                    {isReturning && (
-                                      <div className="space-y-2 pt-1 border-t border-gray-100">
-                                        <div>
-                                          <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">¿Motivo del ban?</label>
-                                          <textarea
-                                            value={banReason}
-                                            onChange={(e) => setBanReason(e.target.value)}
-                                            rows={2}
-                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
-                                          />
-                                        </div>
-                                        <div>
-                                          <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">¿Por qué deberías volver?</label>
-                                          <textarea
-                                            value={returnReason}
-                                            onChange={(e) => setReturnReason(e.target.value)}
-                                            rows={2}
-                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {formError && (
-                                    <div className="bg-red-50 border border-red-100 p-2.5 rounded-xl flex items-start gap-1.5 text-red-500">
-                                      <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                                      <p className="font-sans text-sm">{formError}</p>
-                                    </div>
-                                  )}
-
-                                  <button
-                                    type="submit"
-                                    disabled={submitting || (!robloxProfileConfirmed && !forceClaim)}
-                                    className={`w-full py-2.5 font-display font-semibold text-sm rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${isReturning ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-[#FFC200] hover:brightness-105 text-black'} active:scale-[0.97]`}
-                                  >
-                                    {submitting ? 'Reservando...' : 'Enviar Postulación'}
-                                  </button>
-                                </form>
-                              )}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="mt-4 space-y-4 pt-2">
-                        <p className="font-sans text-xs text-gray-500 text-left leading-relaxed">
-                          Como ya has pasado la entrevista, por favor proporciona tus nombres oficiales de Roblox y TikTok para procesar tu aprobación de forma manual.
-                        </p>
-                        <form onSubmit={handleBook} className="space-y-4">
-                          <div className="space-y-2 text-left">
-                            <div>
-                              <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">Usuario de Roblox</label>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  value={robloxUser}
-                                  onChange={(e) => {
-                                    setRobloxUser(e.target.value);
-                                    resetRobloxVerification();
-                                  }}
-                                  placeholder="Ej: MilumonRoblox"
-                                  className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
-                                />
-                                <button
-                                  type="button"
-                                  disabled={verifyingRoblox || !robloxUser.trim()}
-                                  onClick={handleVerifyRobloxForInterview}
-                                  className="px-4 py-2 bg-[#2b2d31] hover:bg-neutral-800 text-white font-display font-semibold text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer shrink-0"
-                                >
-                                  {verifyingRoblox ? 'Validando...' : 'Validar'}
-                                </button>
-                              </div>
-                            </div>
-                            {isDuplicate && (
-                              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
-                                <p className="text-xs text-amber-800 font-sans font-medium">
-                                  Esta cuenta ya está vinculada al correo <span className="font-semibold">{conflictedEmail}</span>. ¿Es tu cuenta de Roblox pero perdiste acceso a tu correo anterior?
-                                </p>
-                                <label className="flex items-center gap-2 text-xs font-semibold text-amber-900 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={forceClaim}
-                                    onChange={(e) => {
-                                      setForceClaim(e.target.checked);
-                                      if (e.target.checked) {
-                                        setFormError(null);
-                                      }
-                                    }}
-                                    className="rounded text-[#FFC200] focus:ring-[#FFC200]/30"
-                                  />
-                                  Solicitar vinculación de todas formas
-                                </label>
-                                {forceClaim && (
-                                  <div className="mt-2">
-                                    <label className="block text-[10px] font-sans font-semibold text-amber-800 mb-0.5">Explicación del reclamo (opcional)</label>
-                                    <textarea
-                                      value={claimReason}
-                                      onChange={(e) => setClaimReason(e.target.value)}
-                                      placeholder="Ej: Perdí mi correo anterior o cambié de cuenta principal"
-                                      rows={2}
-                                      className="w-full px-2 py-1 bg-white border border-amber-200 rounded-lg font-sans text-xs focus:outline-none text-gray-800"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            <div>
-                              <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">Usuario de TikTok</label>
+                            <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">Usuario Roblox</label>
+                            <div className="flex gap-2">
                               <input
                                 type="text"
-                                value={tiktokUser}
-                                onChange={(e) => setTiktokUser(e.target.value)}
-                                placeholder="Ej: @Milumon"
-                                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
+                                value={robloxUser}
+                                onChange={(e) => {
+                                  setRobloxUser(e.target.value);
+                                  resetRobloxVerification();
+                                }}
+                                placeholder="Ej: MilumonRoblox"
+                                className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
                               />
-                            </div>
-                            {verifiedRobloxProfile && (
-                              <div className={`rounded-xl border p-3 ${robloxProfileConfirmed ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
-                                <div className="flex items-center gap-3">
-                                  {verifiedRobloxProfile.avatarUrl ? (
-                                    <img
-                                      src={verifiedRobloxProfile.avatarUrl}
-                                      alt={verifiedRobloxProfile.displayName}
-                                      className="w-14 h-14 rounded-xl object-cover border border-white"
-                                      style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }}
-                                    />
-                                  ) : (
-                                    <div className="w-14 h-14 rounded-xl bg-white border border-amber-100 flex items-center justify-center text-2xl">
-                                      🐣
-                                    </div>
-                                  )}
-                                  <div className="min-w-0 flex-1">
-                                    <p className="font-display font-semibold text-sm text-[#2D3139] truncate">
-                                      {verifiedRobloxProfile.displayName}
-                                    </p>
-                                    <p className="font-sans text-xs text-gray-500 truncate">
-                                      @{verifiedRobloxProfile.username} · ID {verifiedRobloxProfile.id}
-                                    </p>
-                                    <p className={`font-sans text-[11px] font-semibold mt-1 ${robloxProfileConfirmed ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                      {robloxProfileConfirmed ? 'Perfil confirmado' : 'Confirma que este es tu perfil de Roblox'}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {!robloxProfileConfirmed && (
-                                  <div className="grid grid-cols-2 gap-2 mt-3">
-                                    <button
-                                      type="button"
-                                      onClick={resetRobloxVerification}
-                                      className="py-2 bg-white hover:bg-gray-50 text-[#2D3139] border border-gray-200 font-display font-semibold text-xs rounded-xl transition-all cursor-pointer"
-                                    >
-                                      Editar usuario
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setRobloxProfileConfirmed(true);
-                                        setFormError(null);
-                                      }}
-                                      className="py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-display font-semibold text-xs rounded-xl transition-all cursor-pointer"
-                                    >
-                                      Sí, es mi perfil
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            <div>
-                              <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">Opinión (opcional)</label>
-                              <textarea
-                                value={userTestimonial}
-                                onChange={(e) => setUserTestimonial(e.target.value.substring(0, 150))}
-                                placeholder="Cuéntanos brevemente qué opinas del Team (Máx. 150 caracteres)"
-                                rows={2}
-                                maxLength={150}
-                                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
-                              />
+                              <button
+                                type="button"
+                                disabled={verifyingRoblox || !robloxUser.trim()}
+                                onClick={handleVerifyRobloxForInterview}
+                                className="px-4 py-2 bg-[#2b2d31] hover:bg-neutral-800 text-white font-display font-semibold text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                              >
+                                {verifyingRoblox ? 'Validando...' : 'Validar'}
+                              </button>
                             </div>
                           </div>
 
-                          {formError && (
-                            <div className="bg-red-50 border border-red-100 p-2.5 rounded-xl flex items-start gap-1.5 text-red-500">
-                              <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                              <p className="font-sans text-sm">{formError}</p>
+                          {isDuplicate && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+                              <p className="text-xs text-amber-800 font-sans font-medium">
+                                Esta cuenta ya está vinculada al correo <span className="font-semibold">{conflictedEmail}</span>. ¿Es tu cuenta de Roblox pero perdiste acceso a tu correo anterior?
+                              </p>
+                              <label className="flex items-center gap-2 text-xs font-semibold text-amber-900 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={forceClaim}
+                                  onChange={(e) => {
+                                    setForceClaim(e.target.checked);
+                                    if (e.target.checked) {
+                                      setFormError(null);
+                                    }
+                                  }}
+                                  className="rounded text-[#FFC200] focus:ring-[#FFC200]/30"
+                                />
+                                Solicitar vinculación de todas formas
+                              </label>
+                              {forceClaim && (
+                                <div className="mt-2">
+                                  <label className="block text-[10px] font-sans font-semibold text-amber-800 mb-0.5">Explicación del reclamo (opcional)</label>
+                                  <textarea
+                                    value={claimReason}
+                                    onChange={(e) => setClaimReason(e.target.value)}
+                                    placeholder="Ej: Perdí mi correo anterior o cambié de cuenta principal"
+                                    rows={2}
+                                    className="w-full px-2 py-1 bg-white border border-amber-200 rounded-lg font-sans text-xs focus:outline-none text-gray-800"
+                                  />
+                                </div>
+                              )}
                             </div>
                           )}
 
-                          <button
-                            type="submit"
-                            disabled={submitting || (!robloxProfileConfirmed && !forceClaim)}
-                            className="w-full py-2.5 font-display font-semibold text-sm rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-[#FFC200] hover:brightness-105 text-black active:scale-[0.97]"
-                          >
-                            {submitting ? 'Enviando...' : 'Enviar Solicitud'}
-                          </button>
-                        </form>
-                      </div>
-                    )}
-                  </div>
-                )}
+                          <div>
+                            <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">Usuario TikTok</label>
+                            <input
+                              type="text"
+                              value={tiktokUser}
+                              onChange={(e) => setTiktokUser(e.target.value)}
+                              placeholder="Ej: @Milumon"
+                              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
+                            />
+                          </div>
 
+                          {verifiedRobloxProfile && (
+                            <div className={`rounded-xl border p-3 ${robloxProfileConfirmed ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+                              <div className="flex items-center gap-3">
+                                {verifiedRobloxProfile.avatarUrl ? (
+                                  <img
+                                    src={verifiedRobloxProfile.avatarUrl}
+                                    alt={verifiedRobloxProfile.displayName}
+                                    className="w-14 h-14 rounded-xl object-cover border border-white"
+                                    style={{ transform: 'scale(1.6) translateY(-8%)', transformOrigin: 'center top', objectPosition: 'center top' }}
+                                  />
+                                ) : (
+                                  <div className="w-14 h-14 rounded-xl bg-white border border-amber-100 flex items-center justify-center text-2xl">
+                                    🐣
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-display font-semibold text-sm text-[#2D3139] truncate">
+                                    {verifiedRobloxProfile.displayName}
+                                  </p>
+                                  <p className="font-sans text-xs text-gray-500 truncate">
+                                    @{verifiedRobloxProfile.username} · ID {verifiedRobloxProfile.id}
+                                  </p>
+                                  <p className={`font-sans text-[11px] font-semibold mt-1 ${robloxProfileConfirmed ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                    {robloxProfileConfirmed ? 'Perfil confirmado' : 'Confirma que este es tu perfil de Roblox'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {!robloxProfileConfirmed && (
+                                <div className="grid grid-cols-2 gap-2 mt-3">
+                                  <button
+                                    type="button"
+                                    onClick={resetRobloxVerification}
+                                    className="py-2 bg-white hover:bg-gray-50 text-[#2D3139] border border-gray-200 font-display font-semibold text-xs rounded-xl transition-all cursor-pointer"
+                                  >
+                                    Editar usuario
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRobloxProfileConfirmed(true);
+                                      setFormError(null);
+                                    }}
+                                    className="py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-display font-semibold text-xs rounded-xl transition-all cursor-pointer"
+                                  >
+                                    Sí, es mi perfil
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div>
+                            <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">Opinión (opcional)</label>
+                            <textarea
+                              value={userTestimonial}
+                              onChange={(e) => setUserTestimonial(e.target.value.substring(0, 150))}
+                              placeholder="Cuéntanos brevemente qué opinas del Team (Máx. 150 caracteres)"
+                              rows={2}
+                              maxLength={150}
+                              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
+                            />
+                          </div>
+
+                          {isReturning && (
+                            <div className="space-y-2 pt-1 border-t border-gray-100">
+                              <div>
+                                <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">¿Motivo del ban?</label>
+                                <textarea
+                                  value={banReason}
+                                  onChange={(e) => setBanReason(e.target.value)}
+                                  rows={2}
+                                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-sans font-medium text-gray-500 mb-0.5">¿Por qué deberías volver?</label>
+                                <textarea
+                                  value={returnReason}
+                                  onChange={(e) => setReturnReason(e.target.value)}
+                                  rows={2}
+                                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC200]/30 text-[#2D3139]"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {formError && (
+                          <div className="bg-red-50 border border-red-100 p-2.5 rounded-xl flex items-start gap-1.5 text-red-500">
+                            <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                            <p className="font-sans text-sm">{formError}</p>
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={submitting || (!robloxProfileConfirmed && !forceClaim)}
+                          className={`w-full py-2.5 font-display font-semibold text-sm rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${isReturning ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-[#FFC200] hover:brightness-105 text-black'} active:scale-[0.97]`}
+                        >
+                          {submitting ? 'Procesando...' : (memberType === 'pollito_oficial' ? 'Solicitar Pollito Oficial' : 'Unirme como Pollito Invitado')}
+                        </button>
+                      </form>
+                    )}
                   </div>
                 )}
 
@@ -1547,7 +1281,7 @@ export default function ComunidadPage() {
               <div className="max-h-[360px] overflow-y-auto pr-1.5 scrollbar-thin">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-1">
                   {sortedMembers.map((member) => {
-                    const role = getMemberRole(member.roblox_user);
+                    const role = getMemberRole(member.roblox_user, member);
                     
                     return (
                       <motion.div

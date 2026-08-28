@@ -13,7 +13,7 @@ export default function AccessPageClient() {
   const [isSyncing, setIsSyncing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const retorno = normalizeReturnPath(searchParams.get('retorno'));
+  const retorno = normalizeReturnPath(searchParams ? searchParams.get('retorno') : null);
 
   useEffect(() => {
     let cancelled = false;
