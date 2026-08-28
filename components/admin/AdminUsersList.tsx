@@ -56,7 +56,7 @@ export function AdminUsersList() {
     } else if (activeTab === 'rejected') {
       result = result.filter((u) => u.linkStatus === 'rejected');
     } else if (activeTab === 'staff') {
-      result = result.filter((u) => u.isAdmin || u.minecraftRank === 'pollito_admin' || u.minecraftRank === 'pollito_moderador');
+      result = result.filter((u) => u.minecraftRank === 'pollito_admin' || u.minecraftRank === 'pollito_moderador' || (u.isAdmin && u.minecraftRank !== 'pollito_oficial' && u.minecraftRank !== 'pollito_invitado'));
     } else if (activeTab === 'official') {
       result = result.filter((u) => u.minecraftRank === 'pollito_oficial');
     } else if (activeTab === 'guest') {
@@ -79,7 +79,7 @@ export function AdminUsersList() {
       approved: users.filter((u) => u.linkStatus === 'approved').length,
       pending: users.filter((u) => u.linkStatus === 'pending').length,
       rejected: users.filter((u) => u.linkStatus === 'rejected').length,
-      staff: users.filter((u) => u.isAdmin || u.minecraftRank === 'pollito_admin' || u.minecraftRank === 'pollito_moderador').length,
+      staff: users.filter((u) => u.minecraftRank === 'pollito_admin' || u.minecraftRank === 'pollito_moderador' || (u.isAdmin && u.minecraftRank !== 'pollito_oficial' && u.minecraftRank !== 'pollito_invitado')).length,
       official: users.filter((u) => u.minecraftRank === 'pollito_oficial').length,
       guest: users.filter((u) => u.minecraftRank === 'pollito_invitado').length,
     };

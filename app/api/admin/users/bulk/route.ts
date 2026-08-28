@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Rango no válido.' }, { status: 400 });
       }
       updates.minecraft_rank = rank;
+      updates.is_admin = rank === 'pollito_admin';
     } else if (action === 'soundboard_enable') {
       updates.soundboard_disabled = false;
       updates.perm_upload_images = true;
