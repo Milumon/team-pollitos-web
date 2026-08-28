@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
   const rankByUserId = new Map(
     (profiles ?? []).map((p) => [
       p.id,
-      p.is_admin ? 'pollito_admin' : (p.minecraft_rank || 'pollito_invitado')
+      p.minecraft_rank || (p.is_admin ? 'pollito_admin' : 'pollito_invitado')
     ])
   );
 

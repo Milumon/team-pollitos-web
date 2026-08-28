@@ -524,12 +524,18 @@ export default function MinecraftAdminView() {
                           )}
 
                           <span className={`rounded-md px-2 py-0.5 text-[10px] font-black uppercase ${
-                            user.is_admin ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' :
+                            user.minecraft_rank === 'pollito_admin' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' :
                             user.minecraft_rank === 'pollito_oficial' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
                             'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                           }`}>
-                            {user.is_admin ? 'Admin 🐣' : user.minecraft_rank === 'pollito_oficial' ? 'Pollito Oficial 🐣' : 'Pollito Invitado 🐣'}
+                            {user.minecraft_rank === 'pollito_admin' ? 'Pollito Admin ⚡' : user.minecraft_rank === 'pollito_oficial' ? 'Pollito Oficial 👑' : 'Pollito Invitado 🐣'}
                           </span>
+
+                          {user.is_admin && (
+                            <span className="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                              Admin Web 🛡️
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -539,8 +545,8 @@ export default function MinecraftAdminView() {
                       <button
                         type="button"
                         onClick={() => void updateRank(user.id, 'pollito_invitado')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
-                          user.minecraft_rank === 'pollito_invitado' && !user.is_admin
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                          user.minecraft_rank === 'pollito_invitado'
                             ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
                             : 'bg-neutral-800 text-gray-400 hover:text-white hover:bg-neutral-700'
                         }`}
@@ -550,8 +556,8 @@ export default function MinecraftAdminView() {
                       <button
                         type="button"
                         onClick={() => void updateRank(user.id, 'pollito_oficial')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
-                          user.minecraft_rank === 'pollito_oficial' && !user.is_admin
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                          user.minecraft_rank === 'pollito_oficial'
                             ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
                             : 'bg-neutral-800 text-gray-400 hover:text-white hover:bg-neutral-700'
                         }`}
@@ -561,8 +567,8 @@ export default function MinecraftAdminView() {
                       <button
                         type="button"
                         onClick={() => void updateRank(user.id, 'pollito_admin')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
-                          user.minecraft_rank === 'pollito_admin' || user.is_admin
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                          user.minecraft_rank === 'pollito_admin'
                             ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
                             : 'bg-neutral-800 text-gray-400 hover:text-white hover:bg-neutral-700'
                         }`}
