@@ -416,57 +416,44 @@ export function ChatOverlayAdminView() {
         {/* Left Side: Controls & Sliders (5 cols) */}
         <div className={`lg:col-span-5 space-y-6 ${mobileTab === 'preview' ? 'max-lg:hidden' : ''}`}>
           
-          {/* Card: Conector TikTok Live */}
+          {/* Card: Conector TikTok Live Automático 24/7 */}
           <div className="bg-[#2b2d31] border border-neutral-700/60 rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,.25)] space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-700/60 pb-3">
               <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${listenerStatus.running ? 'bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse' : 'bg-neutral-500'}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${
+                  listenerStatus.running
+                    ? 'bg-red-500 shadow-[0_0_10px_#ef4444] animate-pulse'
+                    : 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
+                }`} />
                 <h3 className="font-bold text-white text-sm">
-                  📡 Conector TikTok Live
+                  📡 Conector TikTok Live (Automático 24/7)
                 </h3>
               </div>
               <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                listenerStatus.running ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-neutral-800 text-gray-400 border border-neutral-700'
+                listenerStatus.running
+                  ? 'bg-red-500/20 text-red-300 border border-red-500/40 animate-pulse'
+                  : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
               }`}>
-                {listenerStatus.running ? '🟢 En línea (Conectado)' : '⚪ Detenido'}
+                {listenerStatus.running ? '🔴 Transmitiendo En Vivo' : '🟢 Servicio VM Activo (En Espera)'}
               </span>
             </div>
 
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <p className="text-xs text-gray-400">
                 {listenerStatus.running
-                  ? 'Capturando comentarios y badges de tu live en tiempo real.'
-                  : 'Inicia el conector para capturar los comentarios de tu live actual.'}
+                  ? 'Capturando comentarios y badges en tiempo real para @milumon_gaming.'
+                  : 'La VM en la nube monitorea tus directos 24/7. En cuanto abras live en TikTok, se conectará sola a tu OBS.'}
               </p>
               
-              <div className="flex items-center gap-2 shrink-0">
-                {listenerStatus.running ? (
-                  <button
-                    type="button"
-                    disabled={actionLoading}
-                    onClick={() => handleListenerAction('stop')}
-                    className="px-3.5 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    <Square className="w-3.5 h-3.5" /> Detener
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={actionLoading}
-                    onClick={() => handleListenerAction('start')}
-                    className="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
-                  >
-                    <Play className="w-3.5 h-3.5" /> Iniciar Listener
-                  </button>
-                )}
-
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                 <button
                   type="button"
                   onClick={loadData}
-                  className="p-2 bg-[#232428] hover:bg-[#2e3035] border border-neutral-700/60 rounded-xl text-gray-400 hover:text-white transition cursor-pointer"
-                  title="Actualizar estado"
+                  disabled={actionLoading}
+                  className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-gray-300 rounded-xl text-xs font-semibold transition cursor-pointer border border-neutral-700/60 flex items-center gap-1.5"
+                  title="Comprobar estado ahora"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className={`w-3.5 h-3.5 ${actionLoading ? 'animate-spin' : ''}`} /> Refrescar
                 </button>
               </div>
             </div>
