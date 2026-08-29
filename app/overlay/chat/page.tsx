@@ -58,7 +58,7 @@ const CANVAS_H = 1280;
 const DEFAULT_SAMPLE_COMMENTS: StreamComment[] = [
   {
     id: 'sample-1',
-    tiktok_user: 'milumon_fan',
+    tiktok_user: 'pollito_vip',
     nickname: 'Pollito VIP 💎',
     message: '¡Hola a todos en el directo! 🐣🔥',
     team_member_level: 12,
@@ -97,6 +97,7 @@ export default function ChatOverlayPage() {
   );
   const params = new URLSearchParams(search);
   const isDebug = params.get('debug') === 'true';
+  const showPreview = params.get('preview') === 'true';
 
   // 1. ResizeObserver for true 9:16 aspect scaling (720x1280 base)
   useEffect(() => {
@@ -142,22 +143,29 @@ export default function ChatOverlayPage() {
         }
 
         const max = setts?.chat_max_messages || 8;
+        // Only fetch comments from current stream session (last 2 hours)
+        const recentThreshold = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
         const { data: initialComments } = await supabase
           .from('stream_comments')
           .select('*')
+          .gte('created_at', recentThreshold)
           .order('created_at', { ascending: false })
           .limit(max);
 
         if (mounted) {
           if (initialComments && initialComments.length > 0) {
             setComments((initialComments as StreamComment[]).reverse());
-          } else {
+          } else if (showPreview) {
             setComments(DEFAULT_SAMPLE_COMMENTS);
+          } else {
+            setComments([]);
           }
         }
       } catch (err) {
         console.error('Error loading chat overlay data:', err);
-        if (mounted) setComments(DEFAULT_SAMPLE_COMMENTS);
+        if (mounted && showPreview) {
+          setComments(DEFAULT_SAMPLE_COMMENTS);
+        }
       }
     }
 
@@ -165,7 +173,7 @@ export default function ChatOverlayPage() {
 
     // Subscribe to Realtime comments
     const commentsChannel = supabase
-      .channel('overlay-chat-realtime-live-v3')
+      .channel('overlay-chat-realtime-live-v4')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'stream_comments' },
@@ -183,7 +191,7 @@ export default function ChatOverlayPage() {
 
     // Subscribe to Realtime settings
     const settingsChannel = supabase
-      .channel('overlay-chat-settings-live-v3')
+      .channel('overlay-chat-settings-live-v4')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'stream_chat_settings', filter: 'id=eq.1' },
@@ -200,9 +208,11 @@ export default function ChatOverlayPage() {
       if (!mounted) return;
       try {
         const max = settingsRef.current.chat_max_messages || 8;
+        const recentThreshold = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
         const { data: latest } = await supabase
           .from('stream_comments')
           .select('*')
+          .gte('created_at', recentThreshold)
           .order('created_at', { ascending: false })
           .limit(max);
 
@@ -225,7 +235,7 @@ export default function ChatOverlayPage() {
       void supabase.removeChannel(commentsChannel);
       void supabase.removeChannel(settingsChannel);
     };
-  }, []);
+  }, [showPreview]);
 
   // 3. Auto-scroll chat container
   useEffect(() => {
@@ -240,7 +250,7 @@ export default function ChatOverlayPage() {
 
   // Filter comments based on dynamic stream settings
   const filteredComments = comments.filter((c) => {
-    if (c.id.startsWith('sample-')) return true;
+    if (c.id.startsWith('sample-')) return showPreview;
     if (settings.moderators_only && !c.is_moderator) return false;
     if (settings.subscribers_only && !c.is_subscriber) return false;
     if (settings.followers_only && !c.is_follower) return false;
@@ -311,60 +321,62 @@ export default function ChatOverlayPage() {
           </div>
         )}
 
-        {/* Dynamic Chat Overlay Box */}
-        <div
-          ref={containerRef}
-          className="absolute transition-all duration-200 overflow-hidden rounded-2xl flex flex-col pointer-events-none"
-          style={{
-            left: `${settings.chat_position_x}px`,
-            top: `${settings.chat_position_y}px`,
-            width: `${settings.chat_width}px`,
-            maxHeight: '600px',
-            fontSize: `${settings.chat_font_size}px`,
-            ...getThemeStyle(),
-          }}
-        >
-          <div className="p-3.5 space-y-2.5 overflow-y-auto custom-scrollbar flex flex-col">
-            {orderedComments.map((comment) => (
-              <div
-                key={comment.id}
-                className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-0.5 leading-snug"
-              >
-                {/* Header: Badges & Name */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {settings.show_badges && (
-                    <>
-                      {comment.is_moderator && (
-                        <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[9px] font-black uppercase">
-                          MOD
-                        </span>
-                      )}
-                      {comment.is_subscriber && (
-                        <span className="px-1.5 py-0.5 bg-[#FFC200]/20 text-[#FFC200] border border-[#FFC200]/30 rounded text-[9px] font-black uppercase">
-                          SUB
-                        </span>
-                      )}
-                      {comment.team_member_level > 0 && (
-                        <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-[9px] font-black">
-                          Nv.{comment.team_member_level}
-                        </span>
-                      )}
-                    </>
-                  )}
+        {/* Dynamic Chat Overlay Box (Only renders if comments exist or in preview) */}
+        {orderedComments.length > 0 && (
+          <div
+            ref={containerRef}
+            className="absolute transition-all duration-200 overflow-hidden rounded-2xl flex flex-col pointer-events-none"
+            style={{
+              left: `${settings.chat_position_x}px`,
+              top: `${settings.chat_position_y}px`,
+              width: `${settings.chat_width}px`,
+              maxHeight: '600px',
+              fontSize: `${settings.chat_font_size}px`,
+              ...getThemeStyle(),
+            }}
+          >
+            <div className="p-3.5 space-y-2.5 overflow-y-auto custom-scrollbar flex flex-col">
+              {orderedComments.map((comment) => (
+                <div
+                  key={comment.id}
+                  className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-0.5 leading-snug"
+                >
+                  {/* Header: Badges & Name */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {settings.show_badges && (
+                      <>
+                        {comment.is_moderator && (
+                          <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[9px] font-black uppercase">
+                            MOD
+                          </span>
+                        )}
+                        {comment.is_subscriber && (
+                          <span className="px-1.5 py-0.5 bg-[#FFC200]/20 text-[#FFC200] border border-[#FFC200]/30 rounded text-[9px] font-black uppercase">
+                            SUB
+                          </span>
+                        )}
+                        {comment.team_member_level > 0 && (
+                          <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-[9px] font-black">
+                            Nv.{comment.team_member_level}
+                          </span>
+                        )}
+                      </>
+                    )}
 
-                  <span className="font-display font-black text-[#FFC200] tracking-wide text-xs">
-                    {comment.nickname}
-                  </span>
+                    <span className="font-display font-black text-[#FFC200] tracking-wide text-xs">
+                      {comment.nickname}
+                    </span>
+                  </div>
+
+                  {/* Body Message */}
+                  <p className="font-sans font-medium text-white/95 break-words drop-shadow-sm">
+                    {comment.message}
+                  </p>
                 </div>
-
-                {/* Body Message */}
-                <p className="font-sans font-medium text-white/95 break-words drop-shadow-sm">
-                  {comment.message}
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
