@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
           }
         }
       } catch (vmErr) {
-        console.warn('VM listener not responding, falling back to Supabase stream_status:', vmErr);
+        // Fallback silently to Supabase stream_status
       }
     }
 
