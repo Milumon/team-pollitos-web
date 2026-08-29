@@ -1,3 +1,12 @@
+function formatNickname(name: string): string {
+  if (!name) return 'Pollito Fan 🐣';
+  const trimmed = name.trim();
+  if (trimmed.startsWith('MS4w') || (trimmed.length > 26 && !trimmed.includes(' '))) {
+    return 'Pollito Fan 🐣';
+  }
+  return trimmed;
+}
+
 'use client';
 
 import React, { useState, useEffect, useRef, useSyncExternalStore } from 'react';
@@ -364,7 +373,7 @@ export default function ChatOverlayPage() {
                     )}
 
                     <span className="font-display font-black text-[#FFC200] tracking-wide text-xs">
-                      {comment.nickname}
+                      {formatNickname(comment.nickname)}
                     </span>
                   </div>
 

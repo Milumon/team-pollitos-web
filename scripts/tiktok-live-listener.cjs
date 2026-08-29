@@ -85,7 +85,10 @@ function startListening(username) {
       session_id: currentSessionId,
       offset_sec: offsetSec,
       tiktok_user: user.uniqueId || user.secUid || 'anonimo',
-      nickname: user.nickname || user.uniqueId || 'Anon',
+      nickname: (() => {
+        const raw = (user.nickname || user.uniqueId || 'Anon').trim();
+        return (raw.startsWith('MS4w') || (raw.length > 26 && !raw.includes(' '))) ? 'Pollito Fan 🐣' : raw;
+      })(),
       message: commentText.trim(),
       avatar_url: user.profilePicture?.urlList?.[0] || null,
       badges: user.badges || [],
