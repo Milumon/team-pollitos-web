@@ -157,7 +157,7 @@ export function ChatOverlayAdminView() {
           comments.map((c) => ({
             id: c.id,
             user: c.tiktok_user || 'usuario',
-            nickname: c.nickname || c.tiktok_user || 'Pollito',
+            nickname: (c.nickname && !c.nickname.startsWith('MS4w') && c.nickname.length <= 28) ? c.nickname : 'Pollito Fan 🐣',
             message: c.message,
             level: c.team_member_level || 0,
             isMod: c.is_moderator,
@@ -186,7 +186,7 @@ export function ChatOverlayAdminView() {
             {
               id: c.id,
               user: c.tiktok_user || 'usuario',
-              nickname: c.nickname || c.tiktok_user || 'Pollito',
+              nickname: (c.nickname && !c.nickname.startsWith('MS4w') && c.nickname.length <= 28) ? c.nickname : 'Pollito Fan 🐣',
               message: c.message,
               level: c.team_member_level || 0,
               isMod: c.is_moderator,
@@ -831,9 +831,11 @@ export function ChatOverlayAdminView() {
                       <span className="font-bold text-[#FFC200] drop-shadow-sm tracking-wide">
                         {item.nickname}
                       </span>
-                      <span className="text-white/40 text-[0.75em]">
-                        @{item.user}
-                      </span>
+                      {item.user && !item.user.startsWith('MS4w') && item.user.length < 22 && item.user !== 'anonimo' && (
+                        <span className="text-white/40 text-[0.75em]">
+                          @{item.user}
+                        </span>
+                      )}
                     </div>
 
                     {/* Message Body */}
