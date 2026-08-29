@@ -310,9 +310,20 @@ export default function ChatOverlayPage() {
   return (
     <div
       ref={aspectContainerRef}
-      className="fixed inset-0 overflow-hidden flex items-center justify-center pointer-events-none select-none"
-      style={{ backgroundColor: 'transparent' }}
+      className="fixed inset-0 overflow-hidden flex items-center justify-center pointer-events-none select-none bg-transparent"
+      style={{ backgroundColor: 'transparent', background: 'transparent' }}
     >
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            html, body {
+              background: transparent !important;
+              background-color: transparent !important;
+              overflow: hidden !important;
+            }
+          `,
+        }}
+      />
       {/* Native 720×1280 OBS Virtual Canvas Container */}
       <div
         className="relative shrink-0 overflow-hidden"
