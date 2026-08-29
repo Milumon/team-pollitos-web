@@ -206,7 +206,9 @@ export default function ChatOverlayPage() {
         { event: 'UPDATE', schema: 'public', table: 'stream_chat_settings', filter: 'id=eq.1' },
         (payload) => {
           if (payload.new) {
-            setSettings(payload.new as ChatSettings);
+            const newSettings = payload.new as ChatSettings;
+            setSettings(newSettings);
+            settingsRef.current = newSettings;
           }
         }
       )
