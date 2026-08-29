@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (typeof body.chat_position_x === 'number') updates.chat_position_x = body.chat_position_x;
     if (typeof body.chat_position_y === 'number') updates.chat_position_y = body.chat_position_y;
     if (typeof body.chat_width === 'number') updates.chat_width = body.chat_width;
-    if (typeof body.chat_max_messages === 'number') updates.chat_max_messages = Math.max(3, Math.min(50, body.chat_max_messages));
+    if (typeof body.chat_max_messages === 'number') updates.chat_max_messages = Math.max(1, Math.min(50, body.chat_max_messages));
     if (typeof body.chat_font_size === 'number') updates.chat_font_size = Math.max(10, Math.min(32, body.chat_font_size));
     if (typeof body.chat_opacity === 'number') updates.chat_opacity = Math.max(0.1, Math.min(1.0, body.chat_opacity));
     if (typeof body.chat_direction === 'string' && ['bottom-up', 'top-down'].includes(body.chat_direction)) {
