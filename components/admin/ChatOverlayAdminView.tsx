@@ -205,25 +205,34 @@ export function ChatOverlayAdminView() {
     };
   }, []);
 
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const saveSettings = async (patch: Partial<ChatSettings>) => {
-    const updated = { ...settings, ...patch };
-    setSettings(updated);
-    setSaving(true);
-    try {
-      const res = await adminFetch('/api/admin/chat-overlay/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
-      });
-      if (res.ok) {
-        setMsgFeedback('Configuración guardada y sincronizada al OBS');
-        setTimeout(() => setMsgFeedback(null), 3000);
-      }
-    } catch (err) {
-      console.error('Error saving settings:', err);
-    } finally {
-      setSaving(false);
-    }
+    setSettings((prev) => {
+      const updated = { ...prev, ...patch };
+      
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(async () => {
+        setSaving(true);
+        try {
+          const res = await adminFetch('/api/admin/chat-overlay/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updated),
+          });
+          if (res.ok) {
+            setMsgFeedback('Configuración guardada y sincronizada al OBS');
+            setTimeout(() => setMsgFeedback(null), 2500);
+          }
+        } catch (err) {
+          console.error('Error saving settings:', err);
+        } finally {
+          setSaving(false);
+        }
+      }, 150);
+
+      return updated;
+    });
   };
 
   const handleListenerAction = async (action: 'start' | 'stop') => {
@@ -490,7 +499,7 @@ export function ChatOverlayAdminView() {
                 max={15}
                 step={1}
                 value={settings.chat_max_messages}
-                onChange={(e) => setSettings({ ...settings, chat_max_messages: Number(e.target.value) })}
+                onChange={(e) => saveSettings({ chat_max_messages: Number(e.target.value) })}
                 onMouseUp={(e) => saveSettings({ chat_max_messages: Number((e.target as HTMLInputElement).value) })}
                 onTouchEnd={(e) => saveSettings({ chat_max_messages: Number((e.target as HTMLInputElement).value) })}
                 className="w-full accent-[#FFC200] cursor-pointer"
@@ -514,7 +523,7 @@ export function ChatOverlayAdminView() {
                 max={680}
                 step={10}
                 value={settings.chat_width}
-                onChange={(e) => setSettings({ ...settings, chat_width: Number(e.target.value) })}
+                onChange={(e) => saveSettings({ chat_width: Number(e.target.value) })}
                 onMouseUp={(e) => saveSettings({ chat_width: Number((e.target as HTMLInputElement).value) })}
                 onTouchEnd={(e) => saveSettings({ chat_width: Number((e.target as HTMLInputElement).value) })}
                 className="w-full accent-[#FFC200] cursor-pointer"
@@ -537,7 +546,7 @@ export function ChatOverlayAdminView() {
                 max={30}
                 step={1}
                 value={settings.chat_font_size}
-                onChange={(e) => setSettings({ ...settings, chat_font_size: Number(e.target.value) })}
+                onChange={(e) => saveSettings({ chat_font_size: Number(e.target.value) })}
                 onMouseUp={(e) => saveSettings({ chat_font_size: Number((e.target as HTMLInputElement).value) })}
                 onTouchEnd={(e) => saveSettings({ chat_font_size: Number((e.target as HTMLInputElement).value) })}
                 className="w-full accent-[#FFC200] cursor-pointer"
@@ -556,7 +565,7 @@ export function ChatOverlayAdminView() {
                 max={1.0}
                 step={0.05}
                 value={settings.chat_opacity}
-                onChange={(e) => setSettings({ ...settings, chat_opacity: Number(e.target.value) })}
+                onChange={(e) => saveSettings({ chat_opacity: Number(e.target.value) })}
                 onMouseUp={(e) => saveSettings({ chat_opacity: Number((e.target as HTMLInputElement).value) })}
                 onTouchEnd={(e) => saveSettings({ chat_opacity: Number((e.target as HTMLInputElement).value) })}
                 className="w-full accent-[#FFC200] cursor-pointer"
