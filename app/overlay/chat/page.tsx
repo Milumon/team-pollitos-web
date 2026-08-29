@@ -1,3 +1,5 @@
+'use client';
+
 function formatNickname(name: string): string {
   if (!name) return 'Pollito Fan 🐣';
   const trimmed = name.trim();
@@ -6,8 +8,6 @@ function formatNickname(name: string): string {
   }
   return trimmed;
 }
-
-'use client';
 
 import React, { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import { supabase } from '@/lib/supabaseClient';
