@@ -1,4 +1,4 @@
-const DISCORD_WEBHOOK = process.env.DISCORD_MINECRAFT_WEBHOOK_URL || 'https://discord.com/api/webhooks/1543078420655906917/Jmfs4VXqjyZ9vTHhakFSwriQv-SKQqpTMbzObzivPQ2P3jWU-pi1W03YAMV6ZvC0PrXS';
+const DISCORD_WEBHOOK = process.env.DISCORD_MINECRAFT_WEBHOOK_URL;
 
 export type MinecraftEventPayload = {
   type: 'death' | 'join' | 'leave' | 'advancement' | 'whitelist' | 'daily_top' | 'boss';
