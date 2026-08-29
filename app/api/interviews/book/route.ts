@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { sendMinecraftDiscordNotification } from '@/lib/discordMinecraft';
 
 export const dynamic = 'force-dynamic';
 
@@ -177,6 +178,14 @@ export async function POST(request: NextRequest) {
 
     if (profileUpsertError) {
       return NextResponse.json({ error: profileUpsertError.message }, { status: 500 });
+    }
+
+    if (linkStatus === 'approved') {
+      void sendMinecraftDiscordNotification({
+        type: 'whitelist',
+        player: finalRobloxName,
+        rank: assignedRank === 'pollito_oficial' ? '👑 Pollito Oficial' : '🐣 Pollito Invitado',
+      });
     }
 
     return NextResponse.json({ success: true, interview: historyData, memberType: assignedRank, linkStatus });
