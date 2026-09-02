@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 type EggInfo = {
@@ -9,6 +9,7 @@ type EggInfo = {
   zone: string;
   target_timestamp: number;
   probability: string;
+  is_now?: boolean;
 };
 
 type PredictionData = {
@@ -17,50 +18,56 @@ type PredictionData = {
   updated_at: string;
 };
 
-const RARITY_CONFIG: Record<string, {
+const RARITY_THEME: Record<string, {
   label: string;
-  emoji: string;
-  glow: string;
-  border: string;
-  bgGradient: string;
-  textColor: string;
+  accent: string;
+  borderColor: string;
+  iconBg: string;
   badgeBg: string;
+  badgeText: string;
+  dividerColor: string;
 }> = {
   secret: {
-    label: 'SECRETO',
-    emoji: '🔮',
-    glow: 'rgba(168, 85, 247, 0.4)',
-    border: 'border-purple-500/60 shadow-[0_0_25px_rgba(168,85,247,0.35)]',
-    bgGradient: 'from-purple-950/80 via-slate-900/90 to-purple-900/40',
-    textColor: 'text-purple-300',
-    badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    label: 'secreto',
+    accent: '#ECD06F',
+    borderColor: 'rgba(236, 208, 111, 0.25)',
+    iconBg: 'rgba(236, 208, 111, 0.12)',
+    badgeBg: 'rgba(209, 72, 54, 0.25)',
+    badgeText: '#E8846F',
+    dividerColor: 'rgba(236, 208, 111, 0.15)',
   },
   eternal: {
-    label: 'ETERNO',
-    emoji: '🌌',
-    glow: 'rgba(59, 130, 246, 0.4)',
-    border: 'border-blue-500/60 shadow-[0_0_25px_rgba(59,130,246,0.35)]',
-    bgGradient: 'from-blue-950/80 via-slate-900/90 to-cyan-900/40',
-    textColor: 'text-blue-300',
-    badgeBg: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+    label: 'eterno',
+    accent: '#6FB0EC',
+    borderColor: 'rgba(111, 176, 236, 0.3)',
+    iconBg: 'rgba(111, 176, 236, 0.12)',
+    badgeBg: 'rgba(59, 130, 246, 0.25)',
+    badgeText: '#93C5FD',
+    dividerColor: 'rgba(111, 176, 236, 0.15)',
   },
   divine: {
-    label: 'DIVINO',
-    emoji: '✨',
-    glow: 'rgba(234, 179, 8, 0.4)',
-    border: 'border-amber-400/70 shadow-[0_0_30px_rgba(234,179,8,0.45)]',
-    bgGradient: 'from-amber-950/80 via-slate-900/90 to-yellow-900/40',
-    textColor: 'text-amber-300',
-    badgeBg: 'bg-amber-500/25 text-amber-300 border-amber-400/50',
+    label: 'divino',
+    accent: '#F6E05E',
+    borderColor: 'rgba(246, 224, 94, 0.35)',
+    iconBg: 'rgba(246, 224, 94, 0.15)',
+    badgeBg: 'rgba(234, 179, 8, 0.3)',
+    badgeText: '#FDE047',
+    dividerColor: 'rgba(246, 224, 94, 0.2)',
   },
 };
+
+function parsePercentage(probStr: string | undefined): number {
+  if (!probStr) return 30;
+  const num = parseInt(probStr.replace('%', '').trim(), 10);
+  return isNaN(num) ? 30 : Math.min(Math.max(num, 5), 100);
+}
 
 export default function EggPredictorOverlay() {
   const [data, setData] = useState<PredictionData | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [isLive, setIsLive] = useState<boolean>(false);
 
-  // 1. Cargar datos iniciales y polling
+  // 1. Polling de respaldo
   const fetchStatus = async () => {
     try {
       const res = await fetch('/api/egg-predictor', { cache: 'no-store' });
@@ -81,7 +88,7 @@ export default function EggPredictorOverlay() {
     return () => clearInterval(interval);
   }, []);
 
-  // 2. Suscribirse a Supabase Realtime
+  // 2. Supabase Realtime
   useEffect(() => {
     const channel = supabase
       .channel('egg_predictions_realtime')
@@ -101,7 +108,7 @@ export default function EggPredictorOverlay() {
     };
   }, []);
 
-  // 3. Cuenta regresiva segundo a segundo
+  // 3. Countdown milimétrico segundo a segundo
   useEffect(() => {
     if (!data?.next_egg?.target_timestamp) {
       setSecondsLeft(null);
@@ -114,7 +121,7 @@ export default function EggPredictorOverlay() {
       const nowSec = Math.floor(Date.now() / 1000);
       const diff = targetSec - nowSec;
 
-      if (diff <= 0) {
+      if (diff <= 0 || data.next_egg?.is_now) {
         setSecondsLeft(0);
         setIsLive(true);
       } else {
@@ -130,12 +137,11 @@ export default function EggPredictorOverlay() {
 
   const nextEgg = data?.next_egg;
   const rarityKey = nextEgg?.rarity?.toLowerCase() || 'secret';
-  const rarity = RARITY_CONFIG[rarityKey] || RARITY_CONFIG.secret;
+  const theme = RARITY_THEME[rarityKey] || RARITY_THEME.secret;
 
-  // Formato MM:SS o Horas
   const formatCountdown = (secs: number | null) => {
+    if (isLive || (secs !== null && secs <= 0)) return '¡AHORA!';
     if (secs === null) return '--:--';
-    if (secs <= 0) return '¡AHORA!';
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
     const s = secs % 60;
@@ -145,122 +151,213 @@ export default function EggPredictorOverlay() {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const upcomingEggs = (data?.upcoming_eggs || []).slice(0, 2);
-
-  if (!nextEgg) {
-    return (
-      <div className="w-full h-full flex items-center justify-start p-4 font-sans select-none pointer-events-none">
-        <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-slate-800/80 shadow-2xl text-slate-300">
-          <span className="text-2xl animate-pulse">🥚</span>
-          <div className="flex flex-col">
-            <span className="text-xs uppercase tracking-widest text-slate-400 font-bold">Predictor de Huevos</span>
-            <span className="text-sm font-semibold text-slate-200">Sincronizando próximas apariciones...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const upcomingQueue = (data?.upcoming_eggs || []).slice(0, 2);
 
   return (
-    <div className="w-screen h-screen flex items-start justify-start p-4 font-sans select-none pointer-events-none overflow-hidden">
-      {/* Contenedor Horizontal Principal */}
-      <div className="flex items-center gap-3">
-        {/* Banner Widget Horizontal */}
-        <div
-          className={`relative flex items-center gap-4 px-5 py-3 rounded-2xl bg-gradient-to-r ${rarity.bgGradient} backdrop-blur-xl border ${rarity.border} transition-all duration-500 overflow-hidden min-w-[560px] max-w-[680px] h-[92px]`}
-        >
-          {/* Luz de fondo ambiental */}
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
+        background: 'transparent',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
+        padding: '16px',
+        margin: 0,
+        overflow: 'hidden',
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        userSelect: 'none',
+        pointerEvents: 'none',
+      }}
+    >
+      {/* Tarjeta Principal Minimalista */}
+      <div
+        style={{
+          background: 'rgba(0, 0, 0, 0.90)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: `0.5px solid ${theme.borderColor}`,
+          borderRadius: '12px',
+          padding: '14px 18px',
+          width: '350px',
+          color: '#ffffff',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          boxShadow: `0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px ${theme.borderColor}`,
+          transition: 'border 0.4s ease, box-shadow 0.4s ease',
+        }}
+      >
+        {/* Nivel 1: Próximo Huevo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Icono */}
           <div
-            className="absolute -left-10 -top-10 w-32 h-32 rounded-full blur-2xl pointer-events-none opacity-60"
-            style={{ backgroundColor: rarity.glow }}
-          />
-
-          {/* 1. Icono del Huevo con Glow y Badge */}
-          <div className="relative flex-shrink-0 flex flex-col items-center justify-center">
-            <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center bg-slate-950/60 border border-white/10 shadow-inner ${
-                isLive ? 'animate-bounce' : 'animate-pulse'
-              }`}
-            >
-              <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
-                🥚
-              </span>
-            </div>
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '8px',
+              background: theme.iconBg,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              border: `0.5px solid ${theme.dividerColor}`,
+            }}
+          >
             <span
-              className={`absolute -bottom-2 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border backdrop-blur-md ${rarity.badgeBg} shadow-sm`}
+              style={{
+                fontSize: '20px',
+                color: theme.accent,
+                display: 'inline-block',
+                transform: isLive ? 'scale(1.15)' : 'scale(1)',
+                transition: 'transform 0.3s ease',
+              }}
             >
-              {rarity.emoji} {rarity.label}
+              🥚
             </span>
           </div>
 
-          {/* 2. Información del Huevo (Nombre y Zona) */}
-          <div className="flex-1 flex flex-col justify-center min-w-0 pr-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs uppercase tracking-widest text-white/60 font-extrabold flex items-center gap-1">
-                PRÓXIMO HUEVO
+          {/* Información: Nombre, Rareza, Zona y Probabilidad */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2px',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  color: '#ffffff',
+                }}
+              >
+                {nextEgg ? nextEgg.name : 'Sincronizando...'}
               </span>
-              <span className="px-1.5 py-0.2 text-[10px] font-bold rounded bg-white/10 text-white/80">
-                {nextEgg.probability || '99%'} PROB
-              </span>
+              {nextEgg && (
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    textTransform: 'lowercase',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: theme.badgeBg,
+                    color: theme.badgeText,
+                    flexShrink: 0,
+                  }}
+                >
+                  {theme.label}
+                </span>
+              )}
             </div>
-            <h1 className="text-xl font-black text-white tracking-wide truncate uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-              {nextEgg.name}
-            </h1>
-            <div className="flex items-center gap-1.5 text-xs text-white/80 font-semibold truncate">
-              <span className="text-emerald-400 font-bold">📍</span>
-              <span className="truncate">{nextEgg.zone}</span>
-            </div>
-          </div>
-
-          {/* 3. Cuenta Regresiva Viva */}
-          <div className="flex-shrink-0 flex flex-col items-end justify-center pl-3 border-l border-white/10">
-            <span className="text-[10px] uppercase tracking-wider text-white/60 font-bold">
-              {isLive ? 'ESTADO' : 'TIEMPO ESTIMADO'}
-            </span>
             <div
-              className={`text-2xl font-black tracking-tight font-mono drop-shadow-[0_0_12px_${rarity.glow}] ${
-                isLive
-                  ? 'text-amber-300 animate-pulse font-sans text-xl'
-                  : secondsLeft && secondsLeft <= 30
-                  ? 'text-red-400 animate-pulse'
-                  : 'text-white'
-              }`}
+              style={{
+                fontSize: '12px',
+                color: 'rgba(255, 255, 255, 0.55)',
+                marginTop: '2px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {nextEgg ? `${nextEgg.zone} · ${nextEgg.probability || '30%'} prob` : 'Conectando con Discord'}
+            </div>
+          </div>
+
+          {/* Cuenta Regresiva */}
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div
+              style={{
+                fontSize: isLive ? '18px' : '22px',
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+                lineHeight: 1,
+                color: isLive ? '#FF4D4D' : theme.accent,
+                textShadow: isLive ? '0 0 10px rgba(255, 77, 77, 0.6)' : 'none',
+                letterSpacing: '-0.5px',
+              }}
             >
               {formatCountdown(secondsLeft)}
             </div>
-            <span className="text-[10px] text-white/50 font-medium">
-              {isLive ? '🔥 ¡En Vivo!' : 'robarenhuevo'}
-            </span>
+            <div
+              style={{
+                fontSize: '10px',
+                color: isLive ? '#FF8080' : 'rgba(255, 255, 255, 0.4)',
+                marginTop: '3px',
+                fontWeight: isLive ? 700 : 500,
+                textTransform: isLive ? 'uppercase' : 'lowercase',
+              }}
+            >
+              {isLive ? '🔥 ¡EN VIVO!' : 'robarenhuevo'}
+            </div>
           </div>
         </div>
 
-        {/* Mini Cola de los 2 Siguientes Huevos (Ticker sutil) */}
-        {upcomingEggs.length > 0 && (
-          <div className="hidden md:flex flex-col gap-1.5 max-w-[200px]">
-            <span className="text-[9px] uppercase tracking-widest text-white/50 font-extrabold pl-1">
-              EN COLA:
-            </span>
-            {upcomingEggs.map((egg, idx) => {
-              const uRarity = RARITY_CONFIG[egg.rarity?.toLowerCase()] || RARITY_CONFIG.secret;
+        {/* Separador */}
+        <div style={{ height: '0.5px', background: theme.dividerColor }} />
+
+        {/* Nivel 2: Mini Cola con Barras de Probabilidad */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {upcomingQueue.length > 0 ? (
+            upcomingQueue.map((egg, idx) => {
+              const uRarityKey = egg.rarity?.toLowerCase() || 'secret';
+              const uTheme = RARITY_THEME[uRarityKey] || RARITY_THEME.secret;
+              const probNum = parsePercentage(egg.probability);
+
               return (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/70 backdrop-blur-md border border-white/10 text-white/90 text-xs shadow-lg"
-                >
-                  <span className="text-xs">{uRarity.emoji}</span>
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-bold truncate text-[11px] leading-tight text-white">
-                      {egg.name}
-                    </span>
-                    <span className="text-[9px] text-white/60 truncate leading-tight">
-                      {egg.zone} • {egg.probability}
-                    </span>
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: 'rgba(255, 255, 255, 0.65)',
+                      width: '95px',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {egg.name}
+                  </span>
+                  <div
+                    style={{
+                      flex: 1,
+                      height: '3px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      borderRadius: '2px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${probNum}%`,
+                        height: '100%',
+                        background: uTheme.accent,
+                        transition: 'width 0.5s ease',
+                      }}
+                    />
                   </div>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: 'rgba(255, 255, 255, 0.45)',
+                      width: '30px',
+                      textAlign: 'right',
+                      fontVariantNumeric: 'tabular-nums',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {egg.probability || `${probNum}%`}
+                  </span>
                 </div>
               );
-            })}
-          </div>
-        )}
+            })
+          ) : (
+            <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.35)', textAlign: 'center', padding: '2px 0' }}>
+              Esperando próximas apariciones...
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
