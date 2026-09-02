@@ -28,7 +28,7 @@ const RARITY_THEME: Record<string, {
   dividerColor: string;
 }> = {
   secret: {
-    label: 'secreto',
+    label: 'Secreto',
     accent: '#ECD06F',
     borderColor: 'rgba(236, 208, 111, 0.25)',
     iconBg: 'rgba(236, 208, 111, 0.12)',
@@ -37,7 +37,7 @@ const RARITY_THEME: Record<string, {
     dividerColor: 'rgba(236, 208, 111, 0.15)',
   },
   eternal: {
-    label: 'eterno',
+    label: 'Eterno',
     accent: '#6FB0EC',
     borderColor: 'rgba(111, 176, 236, 0.3)',
     iconBg: 'rgba(111, 176, 236, 0.12)',
@@ -46,7 +46,7 @@ const RARITY_THEME: Record<string, {
     dividerColor: 'rgba(111, 176, 236, 0.15)',
   },
   divine: {
-    label: 'divino',
+    label: 'Divino',
     accent: '#F6E05E',
     borderColor: 'rgba(246, 224, 94, 0.35)',
     iconBg: 'rgba(246, 224, 94, 0.15)',
@@ -55,6 +55,15 @@ const RARITY_THEME: Record<string, {
     dividerColor: 'rgba(246, 224, 94, 0.2)',
   },
 };
+
+function toTitleCase(str: string | null | undefined): string {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 
 function parsePercentage(probStr: string | undefined): number {
   if (!probStr) return 30;
@@ -231,14 +240,14 @@ export default function EggPredictorOverlay() {
                   color: '#ffffff',
                 }}
               >
-                {nextEgg ? nextEgg.name : 'Sincronizando...'}
+                {nextEgg ? toTitleCase(nextEgg.name) : 'Sincronizando...'}
               </span>
               {nextEgg && (
                 <span
                   style={{
                     fontSize: '10px',
                     fontWeight: 600,
-                    textTransform: 'lowercase',
+                    textTransform: 'capitalize',
                     padding: '2px 6px',
                     borderRadius: '4px',
                     background: theme.badgeBg,
@@ -260,7 +269,7 @@ export default function EggPredictorOverlay() {
                 textOverflow: 'ellipsis',
               }}
             >
-              {nextEgg ? `${nextEgg.zone} · ${nextEgg.probability || '30%'} prob` : 'Conectando con Discord'}
+              {nextEgg ? `${toTitleCase(nextEgg.zone)} · ${nextEgg.probability || '30%'} Prob.` : 'Conectando con Discord'}
             </div>
           </div>
 
@@ -285,10 +294,10 @@ export default function EggPredictorOverlay() {
                 color: isLive ? '#FF8080' : 'rgba(255, 255, 255, 0.4)',
                 marginTop: '3px',
                 fontWeight: isLive ? 700 : 500,
-                textTransform: isLive ? 'uppercase' : 'lowercase',
+                textTransform: isLive ? 'uppercase' : 'none',
               }}
             >
-              {isLive ? '🔥 ¡EN VIVO!' : 'robarenhuevo'}
+              {isLive ? '🔥 ¡EN VIVO!' : 'Robar En Huevo'}
             </div>
           </div>
         </div>
@@ -317,7 +326,7 @@ export default function EggPredictorOverlay() {
                       textOverflow: 'ellipsis',
                     }}
                   >
-                    {egg.name}
+                    {toTitleCase(egg.name)}
                   </span>
                   <div
                     style={{
