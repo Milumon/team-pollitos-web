@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 type EggSpawn = {
@@ -17,41 +18,41 @@ const RARITY_THEME: Record<string, {
   label: string;
   accent: string;
   borderColor: string;
-  iconBg: string;
-  badgeBg: string;
-  badgeText: string;
-  dividerColor: string;
+  badgeBgDark: string;
+  badgeBgLight: string;
+  badgeTextDark: string;
+  badgeTextLight: string;
   glow: string;
 }> = {
   secret: {
     label: 'Secreto',
     accent: '#ECD06F',
-    borderColor: 'rgba(236, 208, 111, 0.35)',
-    iconBg: 'rgba(236, 208, 111, 0.15)',
-    badgeBg: 'rgba(209, 72, 54, 0.28)',
-    badgeText: '#E8846F',
-    dividerColor: 'rgba(236, 208, 111, 0.2)',
-    glow: 'rgba(236, 208, 111, 0.4)',
+    borderColor: 'rgba(236, 208, 111, 0.4)',
+    badgeBgDark: 'rgba(209, 72, 54, 0.35)',
+    badgeBgLight: '#1d1d1f',
+    badgeTextDark: '#FFA07A',
+    badgeTextLight: '#ffffff',
+    glow: 'rgba(236, 208, 111, 0.5)',
   },
   eternal: {
     label: 'Eterno',
     accent: '#6FB0EC',
-    borderColor: 'rgba(111, 176, 236, 0.4)',
-    iconBg: 'rgba(111, 176, 236, 0.15)',
-    badgeBg: 'rgba(59, 130, 246, 0.28)',
-    badgeText: '#93C5FD',
-    dividerColor: 'rgba(111, 176, 236, 0.2)',
-    glow: 'rgba(111, 176, 236, 0.45)',
+    borderColor: 'rgba(111, 176, 236, 0.45)',
+    badgeBgDark: 'rgba(59, 130, 246, 0.35)',
+    badgeBgLight: '#1e3a8a',
+    badgeTextDark: '#93C5FD',
+    badgeTextLight: '#ffffff',
+    glow: 'rgba(111, 176, 236, 0.55)',
   },
   divine: {
     label: 'Divino',
     accent: '#F6E05E',
-    borderColor: 'rgba(246, 224, 94, 0.45)',
-    iconBg: 'rgba(246, 224, 94, 0.18)',
-    badgeBg: 'rgba(234, 179, 8, 0.35)',
-    badgeText: '#FDE047',
-    dividerColor: 'rgba(246, 224, 94, 0.25)',
-    glow: 'rgba(246, 224, 94, 0.5)',
+    borderColor: 'rgba(246, 224, 94, 0.5)',
+    badgeBgDark: 'rgba(234, 179, 8, 0.4)',
+    badgeBgLight: '#854d0e',
+    badgeTextDark: '#FDE047',
+    badgeTextLight: '#ffffff',
+    glow: 'rgba(246, 224, 94, 0.6)',
   },
 };
 
@@ -71,29 +72,34 @@ function toTitleCase(str: string | null | undefined): string {
     .join(' ');
 }
 
-function formatTimeAgo(createdAtStr: string, nowMs: number): string {
+function formatCompactTime(createdAtStr: string, nowMs: number): string {
   const createdMs = new Date(createdAtStr).getTime();
   const diffSec = Math.max(0, Math.floor((nowMs - createdMs) / 1000));
 
-  if (diffSec < 45) return '¡Recién salido!';
-  if (diffSec < 60) return `Hace ${diffSec}s`;
+  if (diffSec < 30) return '¡AHORA!';
+  if (diffSec < 60) return `${diffSec}s`;
   const mins = Math.floor(diffSec / 60);
-  if (mins < 60) return `Hace ${mins}m`;
+  if (mins < 60) return `${mins}m`;
   const hours = Math.floor(mins / 60);
-  return `Hace ${hours}h ${mins % 60}m`;
+  return `${hours}h ${mins % 60}m`;
 }
 
-export default function EggSpawnsOverlay() {
+function MonsterWidgetContent() {
+  const searchParams = useSearchParams();
+  const isLight = searchParams?.get('theme') === 'light';
+  const customSize = parseInt(searchParams?.get('size') || '220', 10);
+  const sizePx = Number.isNaN(customSize) || customSize < 160 ? 220 : customSize;
+
   const [spawns, setSpawns] = useState<EggSpawn[]>([]);
   const [nowMs, setNowMs] = useState<number>(Date.now());
+  const [activeIndex, setActiveIndex] = useState<number>(0);
   const [isAlerting, setIsAlerting] = useState<boolean>(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
-  const [activeCarouselIdx, setActiveCarouselIdx] = useState<number>(0);
 
   // 1. Cargar historial inicial y polling de respaldo
   const fetchSpawns = async () => {
     try {
-      const res = await fetch('/api/egg-spawns?limit=6', { cache: 'no-store' });
+      const res = await fetch('/api/egg-spawns?limit=8', { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json)) {
@@ -107,23 +113,23 @@ export default function EggSpawnsOverlay() {
 
   useEffect(() => {
     fetchSpawns();
-    const pollInterval = setInterval(fetchSpawns, 5000);
+    const pollInterval = setInterval(fetchSpawns, 6000);
     return () => clearInterval(pollInterval);
   }, []);
 
   // 2. Suscripción a Realtime INSERT en public.egg_spawns
   useEffect(() => {
     const channel = supabase
-      .channel('egg_spawns_realtime')
+      .channel('monster_widget_spawns_realtime')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'egg_spawns' },
         (payload) => {
           if (payload.new) {
             const newSpawn = payload.new as EggSpawn;
-            setSpawns((prev) => [newSpawn, ...prev.filter((item) => item.id !== newSpawn.id)].slice(0, 6));
-            // Forzar mostrar el nuevo spawn en pantalla principal
-            setActiveCarouselIdx(0);
+            setSpawns((prev) => [newSpawn, ...prev.filter((item) => item.id !== newSpawn.id)].slice(0, 8));
+            // Saltar de inmediato al nuevo monstruo y activar alerta
+            setActiveIndex(0);
             setIsAlerting(true);
             setTimeout(() => setIsAlerting(false), 18000);
           }
@@ -144,31 +150,58 @@ export default function EggSpawnsOverlay() {
     return () => clearInterval(timer);
   }, []);
 
-  // 4. Carrusel automático cuando hay múltiples huevos activos en el mapa (<25 min)
-  const activeEggs = spawns.filter((s) => {
-    const ageMin = (nowMs - new Date(s.created_at).getTime()) / (1000 * 60);
-    return ageMin <= 25; // Considerados activos en el mapa
-  });
+  // 4. Determinar los monstruos en carrusel
+  // Si hay monstruos aparecidos en los últimos 25 minutos, rotar entre ellos.
+  // Si no hay ninguno reciente (<25m), mostrar los últimos 2-3 del historial para no dejar el widget vacío.
+  const displayEggs = useMemo(() => {
+    const active = spawns.filter((s) => {
+      const ageMin = (nowMs - new Date(s.created_at).getTime()) / (1000 * 60);
+      return ageMin <= 25;
+    });
+    if (active.length > 0) return active;
+    return spawns.slice(0, 3);
+  }, [spawns, nowMs]);
 
+  // 5. Rotación suave cada 5 segundos
   useEffect(() => {
-    if (activeEggs.length <= 1 || isAlerting) return;
+    if (displayEggs.length <= 1 || isAlerting) return;
 
-    const carouselInterval = setInterval(() => {
-      setActiveCarouselIdx((prev) => (prev + 1) % activeEggs.length);
-    }, 6000); // Rota suavemente cada 6 segundos
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % displayEggs.length);
+    }, 5000);
 
-    return () => clearInterval(carouselInterval);
-  }, [activeEggs.length, isAlerting]);
+    return () => clearInterval(interval);
+  }, [displayEggs.length, isAlerting]);
 
-  // Selección del huevo en pantalla principal
-  const currentSpawn = (activeEggs.length > 0 ? activeEggs[activeCarouselIdx % activeEggs.length] : spawns[0]) || null;
-  const rarityKey = normalizeRarity(currentSpawn?.rarity);
+  const currentEgg = displayEggs[activeIndex % Math.max(1, displayEggs.length)] || spawns[0] || null;
+
+  if (!currentEgg) {
+    return (
+      <div
+        style={{
+          width: `${sizePx}px`,
+          height: `${sizePx}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: isLight ? '#ffffff' : 'rgba(15, 15, 18, 0.85)',
+          borderRadius: '14px',
+          border: isLight ? '1px solid #ececef' : '1px solid rgba(255, 255, 255, 0.1)',
+          color: isLight ? '#8b8b93' : '#6b6b73',
+          fontSize: '12px',
+          fontWeight: 600,
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+        }}
+      >
+        Esperando spawns...
+      </div>
+    );
+  }
+
+  const rarityKey = normalizeRarity(currentEgg.rarity);
   const theme = RARITY_THEME[rarityKey];
-
-  // Mini lista de los otros huevos
-  const otherSpawns = spawns.filter((s) => s.id !== currentSpawn?.id).slice(0, 2);
-
-  const hasValidImage = currentSpawn?.image_url && !failedImages.has(currentSpawn.image_url);
+  const hasValidImage = currentEgg.image_url && !failedImages.has(currentEgg.image_url);
+  const timeText = isAlerting ? '¡AHORA!' : formatCompactTime(currentEgg.created_at, nowMs);
 
   return (
     <div
@@ -182,79 +215,137 @@ export default function EggSpawnsOverlay() {
         padding: '16px',
         margin: 0,
         overflow: 'hidden',
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
         userSelect: 'none',
-        pointerEvents: 'none',
       }}
     >
-      {/* Tarjeta de Spawns */}
       <div
+        id="widget"
         style={{
-          background: 'rgba(0, 0, 0, 0.90)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          border: `0.5px solid ${theme.borderColor}`,
-          borderRadius: '12px',
-          padding: '14px 18px',
-          width: '350px',
-          color: '#ffffff',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-          boxShadow: isAlerting
-            ? `0 0 35px ${theme.glow}, 0 8px 32px rgba(0, 0, 0, 0.8)`
-            : `0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px ${theme.borderColor}`,
-          transition: 'all 0.4s ease',
-          transform: isAlerting ? 'scale(1.02)' : 'scale(1)',
+          width: `${sizePx}px`,
+          height: `${sizePx}px`,
+          position: 'relative',
         }}
       >
-        {/* Nivel 1: Huevo Aparecido Principal */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Icono / Imagen con Glow y Fallback Seguro */}
+        <div
+          className="card"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: isLight
+              ? '#ffffff'
+              : 'rgba(13, 13, 16, 0.92)',
+            backdropFilter: isLight ? 'none' : 'blur(16px)',
+            WebkitBackdropFilter: isLight ? 'none' : 'blur(16px)',
+            borderRadius: '14px',
+            border: isLight
+              ? '1px solid #ececef'
+              : `1px solid ${isAlerting ? theme.accent : theme.borderColor}`,
+            boxShadow: isAlerting
+              ? `0 0 30px ${theme.glow}, 0 4px 20px rgba(0,0,0,0.8)`
+              : isLight
+                ? '0 2px 12px rgba(0,0,0,0.12)'
+                : `0 8px 25px rgba(0,0,0,0.7), 0 0 12px ${theme.borderColor}`,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            transition: 'opacity 0.35s ease, transform 0.35s ease, border-color 0.35s ease',
+            transform: isAlerting ? 'scale(1.02)' : 'scale(1)',
+          }}
+        >
+          {/* Tag de Rareza (Top Left) */}
           <div
+            className="tag"
             style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '8px',
-              background: theme.iconBg,
+              position: 'absolute',
+              top: '8px',
+              left: '8px',
+              background: isLight ? theme.badgeBgLight : theme.badgeBgDark,
+              color: isLight ? theme.badgeTextLight : theme.badgeTextDark,
+              border: isLight ? 'none' : `0.5px solid ${theme.accent}`,
+              fontSize: '9px',
+              fontWeight: 800,
+              padding: '3px 7px',
+              borderRadius: '5px',
+              letterSpacing: '0.4px',
+              zIndex: 2,
+              textTransform: 'uppercase',
+              boxShadow: isAlerting ? `0 0 8px ${theme.glow}` : 'none',
+            }}
+          >
+            {theme.label}
+          </div>
+
+          {/* Tiempo Transcurrido (Top Right) */}
+          <div
+            className="time"
+            style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              background: isAlerting
+                ? '#ef4444'
+                : isLight
+                  ? 'rgba(255, 255, 255, 0.92)'
+                  : 'rgba(255, 255, 255, 0.1)',
+              color: isAlerting
+                ? '#ffffff'
+                : isLight
+                  ? '#6b6b73'
+                  : 'rgba(255, 255, 255, 0.8)',
+              fontSize: '9px',
+              fontWeight: 700,
+              padding: '3px 7px',
+              borderRadius: '5px',
+              zIndex: 2,
+              letterSpacing: '0.2px',
+              boxShadow: isAlerting ? '0 0 10px rgba(239, 68, 68, 0.6)' : 'none',
+            }}
+          >
+            {timeText}
+          </div>
+
+          {/* Thumbnail Centrado del Monstruo / Huevo */}
+          <div
+            className="thumb"
+            style={{
+              flex: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              flexShrink: 0,
-              border: `0.5px solid ${theme.dividerColor}`,
-              boxShadow: isAlerting ? `0 0 15px ${theme.glow}` : 'none',
-              overflow: 'hidden',
-              padding: hasValidImage ? '2px' : '0',
+              position: 'relative',
+              paddingTop: '26px',
+              paddingBottom: '4px',
             }}
           >
             {hasValidImage ? (
               <img
-                src={currentSpawn.image_url!}
-                alt={currentSpawn.egg_name}
+                src={currentEgg.image_url!}
+                alt={currentEgg.egg_name}
                 referrerPolicy="no-referrer"
                 onError={() => {
-                  if (currentSpawn.image_url) {
-                    setFailedImages((prev) => new Set(prev).add(currentSpawn.image_url!));
+                  if (currentEgg.image_url) {
+                    setFailedImages((prev) => new Set(prev).add(currentEgg.image_url!));
                   }
                 }}
                 style={{
-                  width: '100%',
-                  height: '100%',
+                  width: `${Math.round(sizePx * 0.48)}px`,
+                  height: `${Math.round(sizePx * 0.48)}px`,
                   objectFit: 'contain',
-                  borderRadius: '6px',
+                  filter: isLight
+                    ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
+                    : `drop-shadow(0 0 16px ${theme.glow})`,
+                  transform: isAlerting ? 'scale(1.12)' : 'scale(1)',
+                  transition: 'transform 0.3s ease, filter 0.3s ease',
                   display: 'block',
-                  transform: isAlerting ? 'scale(1.15)' : 'scale(1)',
-                  transition: 'transform 0.3s ease',
                 }}
               />
             ) : (
               <span
                 style={{
-                  fontSize: '22px',
-                  color: theme.accent,
-                  display: 'inline-block',
-                  transform: isAlerting ? 'scale(1.2)' : 'scale(1)',
-                  transition: 'transform 0.3s ease',
+                  fontSize: `${Math.round(sizePx * 0.3)}px`,
+                  lineHeight: 1,
+                  filter: isLight ? 'none' : `drop-shadow(0 0 12px ${theme.glow})`,
                 }}
               >
                 🥚
@@ -262,162 +353,112 @@ export default function EggSpawnsOverlay() {
             )}
           </div>
 
-          {/* Información del Huevo */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  letterSpacing: '0.2px',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  color: '#ffffff',
-                }}
-              >
-                {currentSpawn ? toTitleCase(currentSpawn.egg_name) : 'Esperando Spawns...'}
-              </span>
-              {currentSpawn && (
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    textTransform: 'capitalize',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    background: theme.badgeBg,
-                    color: theme.badgeText,
-                    flexShrink: 0,
-                  }}
-                >
-                  {theme.label}
-                </span>
-              )}
-            </div>
+          {/* Información del Monstruo (Name + Zona) */}
+          <div
+            className="info"
+            style={{
+              padding: '6px 11px 8px',
+              textAlign: 'left',
+            }}
+          >
             <div
+              className="name"
               style={{
-                fontSize: '12px',
-                color: 'rgba(255, 255, 255, 0.55)',
-                marginTop: '2px',
+                fontSize: sizePx >= 220 ? '15px' : '13px',
+                fontWeight: 800,
+                color: isLight ? '#1d1d1f' : '#ffffff',
+                lineHeight: 1.15,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}
             >
-              {currentSpawn ? toTitleCase(currentSpawn.zone) : 'Conectando con Discord'}
-            </div>
-          </div>
-
-          {/* Estado / Tiempo Transcurrido */}
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div
-              style={{
-                fontSize: isAlerting ? '13px' : '12px',
-                fontWeight: 700,
-                lineHeight: 1,
-                color: isAlerting ? '#FF4D4D' : theme.accent,
-                textShadow: isAlerting ? '0 0 10px rgba(255, 77, 77, 0.6)' : 'none',
-                letterSpacing: '-0.3px',
-              }}
-            >
-              {currentSpawn ? (isAlerting ? '🔥 ¡APARECIÓ!' : formatTimeAgo(currentSpawn.created_at, nowMs)) : '--'}
+              {toTitleCase(currentEgg.egg_name)}
             </div>
             <div
+              className="parents"
               style={{
-                fontSize: '10px',
-                color: isAlerting ? '#FF8080' : 'rgba(255, 255, 255, 0.4)',
+                fontSize: sizePx >= 220 ? '11px' : '10px',
+                color: isLight ? '#8b8b93' : 'rgba(255, 255, 255, 0.55)',
+                fontWeight: 600,
                 marginTop: '3px',
-                fontWeight: isAlerting ? 700 : 500,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
               }}
             >
-              {activeEggs.length > 1 ? `Activo (${(activeCarouselIdx % activeEggs.length) + 1}/${activeEggs.length})` : (isAlerting ? '¡En Vivo!' : 'Spawn Reciente')}
+              <span>📍</span>
+              <span>{toTitleCase(currentEgg.zone)}</span>
             </div>
           </div>
-        </div>
 
-        {/* Separador */}
-        <div style={{ height: '0.5px', background: theme.dividerColor }} />
-
-        {/* Nivel 2: Otros Huevos Activos o Recientes */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {otherSpawns.length > 0 ? (
-            otherSpawns.map((item) => {
-              const hRarityKey = normalizeRarity(item.rarity);
-              const hTheme = RARITY_THEME[hRarityKey];
-              const isItemImgValid = item.image_url && !failedImages.has(item.image_url);
-
-              return (
-                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isItemImgValid ? (
-                    <img
-                      src={item.image_url!}
-                      alt={item.egg_name}
-                      referrerPolicy="no-referrer"
-                      onError={() => {
-                        if (item.image_url) {
-                          setFailedImages((prev) => new Set(prev).add(item.image_url!));
-                        }
-                      }}
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        objectFit: 'contain',
-                        borderRadius: '4px',
-                        flexShrink: 0,
-                      }}
-                    />
-                  ) : (
-                    <span style={{ fontSize: '13px', flexShrink: 0 }}>🥚</span>
-                  )}
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      width: '100px',
-                      flexShrink: 0,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {toTitleCase(item.egg_name)}
-                  </span>
+          {/* Puntos Indicadores de Carrusel */}
+          {displayEggs.length > 1 && (
+            <div
+              className="dots"
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '4px',
+                paddingBottom: '8px',
+              }}
+            >
+              {displayEggs.map((egg, i) => {
+                const isActive = i === (activeIndex % displayEggs.length);
+                return (
                   <div
+                    key={egg.id || i}
+                    className={`dot ${isActive ? 'active' : ''}`}
                     style={{
-                      flex: 1,
-                      fontSize: '11px',
-                      color: hTheme.accent,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      opacity: 0.85,
+                      width: isActive ? '14px' : '5px',
+                      height: '5px',
+                      borderRadius: isActive ? '3px' : '50%',
+                      background: isActive
+                        ? isLight
+                          ? '#1d1d1f'
+                          : theme.accent
+                        : isLight
+                          ? '#d1d1d6'
+                          : 'rgba(255, 255, 255, 0.25)',
+                      transition: 'width 0.25s ease, background 0.25s ease',
                     }}
-                  >
-                    {toTitleCase(item.zone)}
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      color: 'rgba(255, 255, 255, 0.45)',
-                      width: '65px',
-                      textAlign: 'right',
-                      fontVariantNumeric: 'tabular-nums',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {formatTimeAgo(item.created_at, nowMs)}
-                  </span>
-                </div>
-              );
-            })
-          ) : (
-            <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.35)', textAlign: 'center', padding: '2px 0' }}>
-              Registrando apariciones en vivo...
+                  />
+                );
+              })}
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function EggSpawnsOverlay() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          style={{
+            width: '220px',
+            height: '220px',
+            background: 'rgba(13, 13, 16, 0.92)',
+            borderRadius: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontSize: '12px',
+          }}
+        >
+          Cargando overlay...
+        </div>
+      }
+    >
+      <MonsterWidgetContent />
+    </Suspense>
   );
 }
