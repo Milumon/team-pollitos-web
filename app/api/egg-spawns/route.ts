@@ -9,6 +9,7 @@ type EggSpawnPayload = {
   zone?: string;
   server_info?: string;
   image_url?: string;
+  created_at?: string;
   metadata?: Record<string, unknown>;
 };
 
