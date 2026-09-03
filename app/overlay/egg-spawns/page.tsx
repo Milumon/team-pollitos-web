@@ -225,15 +225,14 @@ function MonsterWidgetContent() {
         id="widget"
         style={{
           width: `${sizePx}px`,
-          height: `${sizePx}px`,
           position: 'relative',
         }}
       >
         <div
           className="card"
           style={{
-            position: 'absolute',
-            inset: 0,
+            width: '100%',
+            height: hasValidImage ? `${sizePx}px` : 'auto',
             background: isLight
               ? '#ffffff'
               : 'rgba(13, 13, 16, 0.92)',
@@ -251,76 +250,79 @@ function MonsterWidgetContent() {
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            transition: 'opacity 0.35s ease, transform 0.35s ease, border-color 0.35s ease',
+            transition: 'opacity 0.35s ease, transform 0.35s ease, border-color 0.35s ease, height 0.35s ease',
             transform: isAlerting ? 'scale(1.02)' : 'scale(1)',
           }}
         >
-          {/* Tag de Rareza (Top Left) */}
+          {/* Header Superior: Tag de Rareza y Tiempo */}
           <div
-            className="tag"
             style={{
-              position: 'absolute',
-              top: '8px',
-              left: '8px',
-              background: isLight ? theme.badgeBgLight : theme.badgeBgDark,
-              color: isLight ? theme.badgeTextLight : theme.badgeTextDark,
-              border: isLight ? 'none' : `0.5px solid ${theme.accent}`,
-              fontSize: '9px',
-              fontWeight: 800,
-              padding: '3px 7px',
-              borderRadius: '5px',
-              letterSpacing: '0.4px',
-              zIndex: 2,
-              textTransform: 'uppercase',
-              boxShadow: isAlerting ? `0 0 8px ${theme.glow}` : 'none',
-            }}
-          >
-            {theme.label}
-          </div>
-
-          {/* Tiempo Transcurrido (Top Right) */}
-          <div
-            className="time"
-            style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              background: isAlerting
-                ? '#ef4444'
-                : isLight
-                  ? 'rgba(255, 255, 255, 0.92)'
-                  : 'rgba(255, 255, 255, 0.1)',
-              color: isAlerting
-                ? '#ffffff'
-                : isLight
-                  ? '#6b6b73'
-                  : 'rgba(255, 255, 255, 0.8)',
-              fontSize: '9px',
-              fontWeight: 700,
-              padding: '3px 7px',
-              borderRadius: '5px',
-              zIndex: 2,
-              letterSpacing: '0.2px',
-              boxShadow: isAlerting ? '0 0 10px rgba(239, 68, 68, 0.6)' : 'none',
-            }}
-          >
-            {timeText}
-          </div>
-
-          {/* Thumbnail Centrado del Monstruo / Huevo */}
-          <div
-            className="thumb"
-            style={{
-              flex: 1,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              paddingTop: '26px',
-              paddingBottom: '4px',
+              justifyContent: 'space-between',
+              padding: '8px 8px 0',
+              zIndex: 2,
             }}
           >
-            {hasValidImage ? (
+            {/* Tag de Rareza (Top Left) */}
+            <div
+              className="tag"
+              style={{
+                background: isLight ? theme.badgeBgLight : theme.badgeBgDark,
+                color: isLight ? theme.badgeTextLight : theme.badgeTextDark,
+                border: isLight ? 'none' : `0.5px solid ${theme.accent}`,
+                fontSize: '9px',
+                fontWeight: 800,
+                padding: '3px 7px',
+                borderRadius: '5px',
+                letterSpacing: '0.4px',
+                textTransform: 'uppercase',
+                boxShadow: isAlerting ? `0 0 8px ${theme.glow}` : 'none',
+              }}
+            >
+              {theme.label}
+            </div>
+
+            {/* Tiempo Transcurrido (Top Right) */}
+            <div
+              className="time"
+              style={{
+                background: isAlerting
+                  ? '#ef4444'
+                  : isLight
+                    ? 'rgba(255, 255, 255, 0.92)'
+                    : 'rgba(255, 255, 255, 0.1)',
+                color: isAlerting
+                  ? '#ffffff'
+                  : isLight
+                    ? '#6b6b73'
+                    : 'rgba(255, 255, 255, 0.8)',
+                fontSize: '9px',
+                fontWeight: 700,
+                padding: '3px 7px',
+                borderRadius: '5px',
+                letterSpacing: '0.2px',
+                boxShadow: isAlerting ? '0 0 10px rgba(239, 68, 68, 0.6)' : 'none',
+              }}
+            >
+              {timeText}
+            </div>
+          </div>
+
+          {/* Thumbnail Centrado del Monstruo (Solo si tiene imagen válida) */}
+          {hasValidImage && (
+            <div
+              className="thumb"
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                paddingTop: '10px',
+                paddingBottom: '4px',
+              }}
+            >
               <img
                 src={currentEgg.image_url!}
                 alt={currentEgg.egg_name}
@@ -342,31 +344,21 @@ function MonsterWidgetContent() {
                   display: 'block',
                 }}
               />
-            ) : (
-              <span
-                style={{
-                  fontSize: `${Math.round(sizePx * 0.3)}px`,
-                  lineHeight: 1,
-                  filter: isLight ? 'none' : `drop-shadow(0 0 12px ${theme.glow})`,
-                }}
-              >
-                🥚
-              </span>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Información del Monstruo (Name + Zona) */}
           <div
             className="info"
             style={{
-              padding: '6px 11px 8px',
+              padding: hasValidImage ? '6px 11px 8px' : '8px 11px 10px',
               textAlign: 'left',
             }}
           >
             <div
               className="name"
               style={{
-                fontSize: sizePx >= 220 ? '15px' : '13px',
+                fontSize: sizePx >= 220 ? '16px' : '14px',
                 fontWeight: 800,
                 color: isLight ? '#1d1d1f' : '#ffffff',
                 lineHeight: 1.15,
