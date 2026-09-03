@@ -186,11 +186,11 @@ export default function EggSpawnsOverlay() {
       >
         {/* Nivel 1: Último Huevo Aparecido */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Icono con Glow */}
+          {/* Icono / Imagen con Glow */}
           <div
             style={{
-              width: '40px',
-              height: '40px',
+              width: '44px',
+              height: '44px',
               borderRadius: '8px',
               background: theme.iconBg,
               display: 'flex',
@@ -199,19 +199,37 @@ export default function EggSpawnsOverlay() {
               flexShrink: 0,
               border: `0.5px solid ${theme.dividerColor}`,
               boxShadow: isAlerting ? `0 0 15px ${theme.glow}` : 'none',
+              overflow: 'hidden',
+              padding: latestSpawn?.image_url ? '2px' : '0',
             }}
           >
-            <span
-              style={{
-                fontSize: '20px',
-                color: theme.accent,
-                display: 'inline-block',
-                transform: isAlerting ? 'scale(1.2)' : 'scale(1)',
-                transition: 'transform 0.3s ease',
-              }}
-            >
-              🥚
-            </span>
+            {latestSpawn?.image_url ? (
+              <img
+                src={latestSpawn.image_url}
+                alt={latestSpawn.egg_name}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  borderRadius: '6px',
+                  display: 'block',
+                  transform: isAlerting ? 'scale(1.15)' : 'scale(1)',
+                  transition: 'transform 0.3s ease',
+                }}
+              />
+            ) : (
+              <span
+                style={{
+                  fontSize: '22px',
+                  color: theme.accent,
+                  display: 'inline-block',
+                  transform: isAlerting ? 'scale(1.2)' : 'scale(1)',
+                  transition: 'transform 0.3s ease',
+                }}
+              >
+                🥚
+              </span>
+            )}
           </div>
 
           {/* Información del Huevo */}
@@ -299,12 +317,27 @@ export default function EggSpawnsOverlay() {
               const hTheme = RARITY_THEME[hRarityKey];
 
               return (
-                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.egg_name}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        objectFit: 'contain',
+                        borderRadius: '4px',
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: '13px', flexShrink: 0 }}>🥚</span>
+                  )}
                   <span
                     style={{
                       fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.65)',
-                      width: '110px',
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      width: '100px',
                       flexShrink: 0,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
