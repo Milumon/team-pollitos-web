@@ -231,6 +231,7 @@ export default function EggSpawnsOverlay() {
               <img
                 src={currentSpawn.image_url!}
                 alt={currentSpawn.egg_name}
+                referrerPolicy="no-referrer"
                 onError={() => {
                   if (currentSpawn.image_url) {
                     setFailedImages((prev) => new Set(prev).add(currentSpawn.image_url!));
@@ -352,6 +353,7 @@ export default function EggSpawnsOverlay() {
                     <img
                       src={item.image_url!}
                       alt={item.egg_name}
+                      referrerPolicy="no-referrer"
                       onError={() => {
                         if (item.image_url) {
                           setFailedImages((prev) => new Set(prev).add(item.image_url!));
