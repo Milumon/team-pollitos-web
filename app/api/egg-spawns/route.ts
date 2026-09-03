@@ -61,18 +61,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'El campo egg_name es obligatorio' }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('egg_spawns')
-    .insert({
+    const insertPayload: Record<string, unknown> = {
       egg_name: body.egg_name.trim(),
       rarity: body.rarity?.trim() || 'secreto',
       zone: body.zone?.trim() || 'Desconocida',
       server_info: body.server_info || null,
       image_url: body.image_url || null,
       metadata: body.metadata || {},
-    })
-    .select()
-    .single();
+    };
+
+    if (body.created_at) {
+      insertPayload.created_at = body.created_at;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('egg_spawns')
+      .insert(insertPayload)
+      .select()
+      .single();
 
   if (error) {
     console.error('[Egg Spawns POST]:', error.message);
