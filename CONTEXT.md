@@ -123,3 +123,6 @@ _Avoid_: Ranking actual, Tabla editable, Acumulado
 Decisión de hacer visible un Batch de Rankings completo. Una activación posterior puede volver a señalar un batch anterior sin modificar sus snapshots.
 _Avoid_: Sobrescritura, Restauración de datos, Publicación parcial
 
+**Overlay de Spawns (Spawn Overlay Widget)**:
+Widget visual en `/overlay/egg-spawns` con estética Cartoon Gaming 3D para OBS Studio y transmisiones en vivo. Muestra la última aparición de huevos raros (Secretos, Eternos, Divinos) con su bioma, tiempo relativo y carrusel de tandas simultáneas. Si el spawn no cuenta con imagen, el contenedor de avatar se suprime por completo y la tarjeta colapsa en altura para optimizar el espacio en el lienzo.
+_Avoid_: Alerta de huevo, Ventana flotante, Notificación de spawn
