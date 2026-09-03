@@ -126,3 +126,8 @@ _Avoid_: Sobrescritura, Restauración de datos, Publicación parcial
 **Overlay de Spawns (Spawn Overlay Widget)**:
 Widget visual en `/overlay/egg-spawns` con estética Cartoon Gaming 3D para OBS Studio y transmisiones en vivo. Muestra la última aparición de huevos raros (Secretos, Eternos, Divinos) con su bioma, tiempo relativo y carrusel de tandas simultáneas. Si el spawn no cuenta con imagen, el contenedor de avatar se suprime por completo y la tarjeta colapsa en altura para optimizar el espacio en el lienzo.
 _Avoid_: Alerta de huevo, Ventana flotante, Notificación de spawn
+
+**Overlay de Usuario Roblox (Roblox User Overlay Widget)**:
+Widget compacto en `/overlay/roblox-user` con estética Cartoon Gaming 3D para streams y transmisiones. Muestra el avatar de Roblox de Milumon, nombre con relieve 3D, la insignia oficial hexagonal de verificación de Roblox y el handle `@MilumonRT` en un formato optimizado y sin sobrecarga de datos.
+_Avoid_: Tarjeta de streamer, Perfil web, Widget de cuenta
+
