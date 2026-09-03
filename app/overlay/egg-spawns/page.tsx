@@ -150,17 +150,19 @@ function MonsterWidgetContent() {
     return () => clearInterval(timer);
   }, []);
 
-  // 4. Determinar los monstruos en carrusel
-  // Si hay monstruos aparecidos en los últimos 25 minutos, rotar entre ellos.
-  // Si no hay ninguno reciente (<25m), mostrar los últimos 2-3 del historial para no dejar el widget vacío.
+  // 4. Mostrar EXCLUSIVAMENTE la última tanda (wave) de spawns
+  // Si en la última tanda salió 1 huevo, se muestra solo ese huevo (sin rotar hacia el pasado).
+  // Si salieron 2 o 3 juntos en la misma tanda (ventana de 2 minutos), rota entre ellos.
   const displayEggs = useMemo(() => {
-    const active = spawns.filter((s) => {
-      const ageMin = (nowMs - new Date(s.created_at).getTime()) / (1000 * 60);
-      return ageMin <= 25;
+    if (spawns.length === 0) return [];
+    const newestTime = new Date(spawns[0].created_at).getTime();
+    const BATCH_WINDOW_MS = 2 * 60 * 1000; // 2 minutos de tolerancia para la misma tanda
+
+    return spawns.filter((s) => {
+      const sTime = new Date(s.created_at).getTime();
+      return Math.abs(newestTime - sTime) <= BATCH_WINDOW_MS;
     });
-    if (active.length > 0) return active;
-    return spawns.slice(0, 3);
-  }, [spawns, nowMs]);
+  }, [spawns]);
 
   // 5. Rotación suave cada 5 segundos
   useEffect(() => {
