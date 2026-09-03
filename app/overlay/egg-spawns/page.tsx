@@ -14,11 +14,55 @@ type EggSpawn = {
   created_at: string;
 };
 
-// Cada rareza con sus colores de glow, acento y emojis idénticos a Discord
-const RARITY_THEME: Record<string, { label: string; glow: string; emoji: string; accent: string }> = {
-  secret: { label: 'Secreto', glow: 'rgba(168, 85, 247, 0.55)', emoji: '🔮', accent: '#c084fc' },
-  eternal: { label: 'Eterno', glow: 'rgba(59, 130, 246, 0.55)', emoji: '🌌', accent: '#60a5fa' },
-  divine: { label: 'Divino', glow: 'rgba(234, 179, 8, 0.6)', emoji: '✨', accent: '#facc15' },
+// Estilo Cartoon / Gaming dinámico según rareza
+const RARITY_THEME: Record<string, {
+  label: string;
+  emoji: string;
+  cardGradient: string;
+  cardBorderColor: string;
+  cardShadow: string;
+  titleColor: string;
+  badgeBg: string;
+  badgeShadow: string;
+  tabGradient: string;
+  tabShadow: string;
+}> = {
+  secret: {
+    label: 'Secreto',
+    emoji: '🔮',
+    cardGradient: 'linear-gradient(180deg, #581c87, #2e1065)',
+    cardBorderColor: '#1a1a1a',
+    cardShadow: '0 5px 0 #180833',
+    titleColor: '#ffe259',
+    badgeBg: '#7c3aed',
+    badgeShadow: '0 2px 0 #4c1d95',
+    tabGradient: 'linear-gradient(180deg, #d6f26b, #8fc93a)',
+    tabShadow: '0 2px 0 #5b8720',
+  },
+  eternal: {
+    label: 'Eterno',
+    emoji: '🌌',
+    cardGradient: 'linear-gradient(180deg, #1d4ed8, #0f2b66)',
+    cardBorderColor: '#1a1a1a',
+    cardShadow: '0 5px 0 #091838',
+    titleColor: '#ffe259',
+    badgeBg: '#2563eb',
+    badgeShadow: '0 2px 0 #1e3a8a',
+    tabGradient: 'linear-gradient(180deg, #38bdf8, #0284c7)',
+    tabShadow: '0 2px 0 #0369a1',
+  },
+  divine: {
+    label: 'Divino',
+    emoji: '✨',
+    cardGradient: 'linear-gradient(180deg, #b45309, #78350f)',
+    cardBorderColor: '#1a1a1a',
+    cardShadow: '0 5px 0 #451a03',
+    titleColor: '#fef08a',
+    badgeBg: '#d97706',
+    badgeShadow: '0 2px 0 #92400e',
+    tabGradient: 'linear-gradient(180deg, #fde047, #eab308)',
+    tabShadow: '0 2px 0 #a16207',
+  },
 };
 
 function normalizeRarity(rawRarity: string | undefined): 'secret' | 'eternal' | 'divine' {
@@ -55,18 +99,18 @@ function formatCompactTime(createdAtStr: string, nowMs: number): string {
   const createdMs = new Date(createdAtStr).getTime();
   const diffSec = Math.max(0, Math.floor((nowMs - createdMs) / 1000));
 
-  if (diffSec < 30) return 'ahora';
-  if (diffSec < 60) return `hace ${diffSec}s`;
+  if (diffSec < 30) return '¡AHORA!';
+  if (diffSec < 60) return `${diffSec}s`;
   const mins = Math.floor(diffSec / 60);
-  if (mins < 60) return `hace ${mins}m`;
+  if (mins < 60) return `${mins}m`;
   const hours = Math.floor(mins / 60);
-  return `hace ${hours}h ${mins % 60}m`;
+  return `${hours}h ${mins % 60}m`;
 }
 
 function MonsterWidgetContent() {
   const searchParams = useSearchParams();
-  const customSize = parseInt(searchParams?.get('size') || '230', 10);
-  const sizePx = Number.isNaN(customSize) || customSize < 160 ? 230 : customSize;
+  const customSize = parseInt(searchParams?.get('size') || '260', 10);
+  const sizePx = Number.isNaN(customSize) || customSize < 180 ? 260 : customSize;
 
   const [spawns, setSpawns] = useState<EggSpawn[]>([]);
   const [nowMs, setNowMs] = useState<number>(Date.now());
@@ -153,16 +197,16 @@ function MonsterWidgetContent() {
       <div
         style={{
           width: `${sizePx}px`,
-          height: `${sizePx}px`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#0a0a0c',
-          borderRadius: '20px',
-          color: 'rgba(255,255,255,0.4)',
+          padding: '16px',
+          background: 'linear-gradient(180deg,#2f6fb0,#1c3f66)',
+          border: '3px solid #1a1a1a',
+          borderRadius: '14px',
+          color: '#ffffff',
           fontSize: '12px',
-          fontWeight: 600,
-          fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
+          fontWeight: 900,
+          fontFamily: "'Arial Black', Arial, sans-serif",
+          textAlign: 'center',
+          boxShadow: '0 4px 0 #0d1f33',
         }}
       >
         Esperando spawns...
@@ -188,137 +232,183 @@ function MonsterWidgetContent() {
         padding: '16px',
         margin: 0,
         overflow: 'hidden',
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        fontFamily: "'Arial Black', 'Impact', Arial, sans-serif",
         userSelect: 'none',
       }}
     >
       <div
         style={{
           width: `${sizePx}px`,
-          height: hasValidImage ? `${sizePx}px` : 'auto',
-          minHeight: hasValidImage ? `${sizePx}px` : 'auto',
-          background: '#0a0a0c',
-          borderRadius: '20px',
-          position: 'relative',
-          overflow: 'hidden',
-          border: `1px solid ${isAlerting ? theme.accent : 'rgba(255, 255, 255, 0.08)'}`,
-          boxShadow: isAlerting
-            ? `0 0 34px ${theme.glow}, 0 8px 25px rgba(0,0,0,0.7)`
-            : `0 8px 25px rgba(0,0,0,0.6), 0 0 16px ${theme.glow.replace(/[\d.]+\)$/, '0.25)')}`,
-          transform: isAlerting ? 'scale(1.02)' : 'scale(1)',
-          transition: 'transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease, height 0.35s ease',
+          boxSizing: 'border-box',
+          filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.5))',
+          transform: isAlerting ? 'scale(1.04)' : 'scale(1)',
+          transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
         }}
       >
-        {/* Glow radial detrás del contenido, color según rareza */}
+        {/* Pestaña superior tipo Carpeta / Folder */}
         <div
           style={{
-            position: 'absolute',
-            inset: 0,
-            background: `radial-gradient(circle at 50% 32%, ${theme.glow.replace(
-              /[\d.]+\)$/,
-              isAlerting ? '0.32)' : '0.18)'
-            )}, transparent 65%)`,
-            transition: 'background 0.35s ease',
-          }}
-        />
-
-        <div
-          style={{
-            position: 'relative',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
+            background: theme.tabGradient,
+            border: '3px solid #1a1a1a',
+            borderBottom: 'none',
+            borderRadius: '12px 12px 0 0',
+            padding: '5px 12px',
+            display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            padding: hasValidImage ? '20px' : '16px 18px',
-            boxSizing: 'border-box',
-            textAlign: 'center',
+            gap: '5px',
+            boxShadow: theme.tabShadow,
+            position: 'relative',
+            zIndex: 2,
           }}
         >
-          {/* Título: Última aparición + nombre grande */}
-          <div style={{ fontSize: sizePx >= 220 ? '13px' : '11px', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>
-            Última aparición
-          </div>
-          <div
-            style={{
-              fontSize: sizePx >= 220 ? '26px' : '22px',
-              fontWeight: 800,
-              color: '#ffffff',
-              letterSpacing: '-0.5px',
-              marginTop: '4px',
-              lineHeight: 1.15,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              maxWidth: '100%',
-            }}
-          >
-            {toTitleCase(currentEgg.egg_name)}
-          </div>
-
-          {/* Thumbnail / foto solo si existe y es válida (desaparece completamente si no hay foto) */}
-          {hasValidImage && (
-            <div
+          <span style={{ fontSize: '11px', fontWeight: 900, color: '#1a1a1a', letterSpacing: '0.4px' }}>
+            ÚLTIMA APARICIÓN
+          </span>
+          {isAlerting && (
+            <span
               style={{
-                width: `${Math.round(sizePx * 0.28)}px`,
-                height: `${Math.round(sizePx * 0.28)}px`,
-                borderRadius: '50%',
-                background: 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: `${Math.round(sizePx * 0.05)}px`,
-                boxShadow: `0 0 22px ${theme.glow}`,
-                overflow: 'hidden',
+                fontSize: '9px',
+                background: '#ef4444',
+                color: '#ffffff',
+                padding: '1px 5px',
+                borderRadius: '4px',
+                fontWeight: 900,
               }}
             >
-              <img
-                src={currentEgg.image_url!}
-                alt={currentEgg.egg_name}
-                referrerPolicy="no-referrer"
-                onError={() =>
-                  setFailedImages((prev) => new Set(prev).add(currentEgg.image_url!))
-                }
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </div>
+              ¡AHORA!
+            </span>
           )}
+        </div>
 
-          {/* Fila de datos secundarios con íconos estilo Discord: tiempo, rareza, zona */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '16px',
-              marginTop: hasValidImage ? `${Math.round(sizePx * 0.07)}px` : '14px',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '100%',
-            }}
-          >
+        {/* Tarjeta principal estilo Cartoon */}
+        <div
+          style={{
+            background: theme.cardGradient,
+            border: `3px solid ${theme.cardBorderColor}`,
+            borderRadius: '0 14px 14px 14px',
+            padding: '12px 12px 10px',
+            boxShadow: theme.cardShadow,
+            marginTop: '-3px',
+            boxSizing: 'border-box',
+            position: 'relative',
+          }}
+        >
+          {/* Fila principal: Avatar (SOLO si hay foto) + Nombre */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: hasValidImage ? '10px' : '0' }}>
+            {hasValidImage && (
+              <div
+                style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '14px',
+                  background: 'rgba(0, 0, 0, 0.35)',
+                  border: '3px solid #1a1a1a',
+                  boxShadow: '0 3px 0 #1a1a1a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                }}
+              >
+                <img
+                  src={currentEgg.image_url!}
+                  alt={currentEgg.egg_name}
+                  referrerPolicy="no-referrer"
+                  onError={() =>
+                    setFailedImages((prev) => new Set(prev).add(currentEgg.image_url!))
+                  }
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Nombre del Huevo con trazo 3D */}
+            <div
+              style={{
+                fontSize: hasValidImage ? '19px' : '22px',
+                fontWeight: 900,
+                color: theme.titleColor,
+                lineHeight: 1.1,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                flex: 1,
+                textShadow:
+                  '-1.5px -1.5px 0 #1a1a1a, 1.5px -1.5px 0 #1a1a1a, -1.5px 1.5px 0 #1a1a1a, 1.5px 1.5px 0 #1a1a1a, 0 3px 0 rgba(0,0,0,0.5)',
+              }}
+            >
+              {toTitleCase(currentEgg.egg_name)}
+            </div>
+          </div>
+
+          {/* Fila inferior de badges: tiempo, rareza, zona */}
+          <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
             {/* Tiempo */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-              <span style={{ fontSize: '14px' }}>🕐</span>
-              <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{timeText}</span>
+            <div
+              style={{
+                background: '#16a34a',
+                border: '2px solid #1a1a1a',
+                borderRadius: '8px',
+                padding: '3px 8px',
+                boxShadow: '0 2px 0 #14532d',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ fontSize: '11px', lineHeight: 1 }}>🕐</span>
+              <span style={{ fontSize: '10px', fontWeight: 900, color: '#ffffff' }}>{timeText}</span>
             </div>
 
             {/* Rareza (Emoji Discord: 🔮 / 🌌 / ✨) */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-              <span style={{ fontSize: '14px' }}>{theme.emoji}</span>
-              <span style={{ fontSize: '10px', color: theme.accent, fontWeight: 700 }}>{theme.label}</span>
+            <div
+              style={{
+                background: theme.badgeBg,
+                border: '2px solid #1a1a1a',
+                borderRadius: '8px',
+                padding: '3px 8px',
+                boxShadow: theme.badgeShadow,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ fontSize: '11px', lineHeight: 1 }}>{theme.emoji}</span>
+              <span style={{ fontSize: '10px', fontWeight: 900, color: '#ffffff' }}>{theme.label}</span>
             </div>
 
-            {/* Zona (Emoji de Bioma Discord: 🌋 / 🌸 / 🦖 / 🌌 / etc.) */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', maxWidth: '85px' }}>
-              <span style={{ fontSize: '14px' }}>{zoneEmoji}</span>
+            {/* Zona (Emoji de Bioma Discord) */}
+            <div
+              style={{
+                background: '#0284c7',
+                border: '2px solid #1a1a1a',
+                borderRadius: '8px',
+                padding: '3px 8px',
+                boxShadow: '0 2px 0 #075985',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                minWidth: 0,
+                flex: 1,
+              }}
+            >
+              <span style={{ fontSize: '11px', lineHeight: 1 }}>{zoneEmoji}</span>
               <span
                 style={{
                   fontSize: '10px',
-                  color: 'rgba(255,255,255,0.6)',
-                  fontWeight: 600,
+                  fontWeight: 900,
+                  color: '#ffffff',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  width: '100%',
                 }}
               >
                 {toTitleCase(currentEgg.zone)}
@@ -326,13 +416,15 @@ function MonsterWidgetContent() {
             </div>
           </div>
 
-          {/* Puntos de carrusel, solo si hay más de 1 en la misma tanda */}
+          {/* Carrusel de puntos cartoon (si hay varios en la misma tanda) */}
           {displayEggs.length > 1 && (
             <div
               style={{
                 display: 'flex',
-                gap: '4px',
-                marginTop: hasValidImage ? `${Math.round(sizePx * 0.06)}px` : '12px',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '5px',
+                marginTop: '10px',
               }}
             >
               {displayEggs.map((egg, i) => {
@@ -341,10 +433,12 @@ function MonsterWidgetContent() {
                   <div
                     key={egg.id || i}
                     style={{
-                      width: isActive ? '14px' : '5px',
-                      height: '5px',
-                      borderRadius: isActive ? '3px' : '50%',
-                      background: isActive ? theme.accent : 'rgba(255,255,255,0.25)',
+                      width: isActive ? '16px' : '6px',
+                      height: '6px',
+                      borderRadius: '3px',
+                      background: isActive ? '#ffe259' : 'rgba(255, 255, 255, 0.3)',
+                      border: '1.5px solid #1a1a1a',
+                      boxShadow: isActive ? '0 1.5px 0 #1a1a1a' : 'none',
                       transition: 'width 0.25s ease, background 0.25s ease',
                     }}
                   />
@@ -364,10 +458,10 @@ export default function EggSpawnsOverlay() {
       fallback={
         <div
           style={{
-            width: '230px',
-            height: '230px',
+            width: '260px',
+            padding: '16px',
             background: '#0a0a0c',
-            borderRadius: '20px',
+            borderRadius: '14px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
