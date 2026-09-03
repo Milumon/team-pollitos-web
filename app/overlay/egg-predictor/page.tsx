@@ -124,8 +124,9 @@ function formatCountdown(secs: number | null, isLive: boolean): string {
 
 function EggPredictorContent() {
   const searchParams = useSearchParams();
-  const customWidth = parseInt(searchParams?.get('width') || searchParams?.get('size') || '310', 10);
-  const widthPx = Number.isNaN(customWidth) || customWidth < 240 ? 310 : customWidth;
+  // Formato vertical más compacto (250px por defecto)
+  const customWidth = parseInt(searchParams?.get('width') || searchParams?.get('size') || '250', 10);
+  const widthPx = Number.isNaN(customWidth) || customWidth < 180 ? 250 : customWidth;
 
   const [data, setData] = useState<PredictionData | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -259,7 +260,7 @@ function EggPredictorContent() {
                 fontWeight: 900,
               }}
             >
-              ¡SPAWNEANDO!
+              ¡AHORA!
             </span>
           ) : (
             <span
@@ -277,7 +278,7 @@ function EggPredictorContent() {
           )}
         </div>
 
-        {/* Tarjeta principal estilo Cartoon */}
+        {/* Tarjeta principal estilo Cartoon (Formato vertical y equilibrado) */}
         <div
           style={{
             background: theme.cardGradient,
@@ -290,52 +291,61 @@ function EggPredictorContent() {
             position: 'relative',
           }}
         >
-          {/* Nombre del Huevo Principal con trazo 3D */}
+          {/* Fila Principal: Nombre a la izquierda + Tiempo Restante al lado derecho (mismo tamaño) */}
           <div
             style={{
-              fontSize: '21px',
-              fontWeight: 900,
-              color: theme.titleColor,
-              lineHeight: 1.1,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              textShadow:
-                '-1.5px -1.5px 0 #1a1a1a, 1.5px -1.5px 0 #1a1a1a, -1.5px 1.5px 0 #1a1a1a, 1.5px 1.5px 0 #1a1a1a, 0 3px 0 rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
             }}
           >
-            {nextEgg ? toTitleCase(nextEgg.name) : 'Sincronizando...'}
-          </div>
-
-          {/* Fila de pastillas inferiores: Cuenta Regresiva, Rareza, Zona, Probabilidad */}
-          <div style={{ display: 'flex', gap: '5px', marginTop: '10px', flexWrap: 'wrap' }}>
-            {/* Cuenta Regresiva */}
+            {/* Nombre del Huevo */}
             <div
               style={{
-                background: isLive ? '#ef4444' : '#16a34a',
-                border: '2px solid #1a1a1a',
-                borderRadius: '8px',
-                padding: '3px 8px',
-                boxShadow: isLive ? '0 2px 0 #7f1d1d' : '0 2px 0 #14532d',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                flexShrink: 0,
+                fontSize: '20px',
+                fontWeight: 900,
+                color: theme.titleColor,
+                lineHeight: 1.1,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                flex: 1,
+                minWidth: 0,
+                textShadow:
+                  '-1.5px -1.5px 0 #1a1a1a, 1.5px -1.5px 0 #1a1a1a, -1.5px 1.5px 0 #1a1a1a, 1.5px 1.5px 0 #1a1a1a, 0 3px 0 rgba(0,0,0,0.5)',
               }}
             >
-              <span style={{ fontSize: '11px', lineHeight: 1 }}>⏱️</span>
-              <span style={{ fontSize: '10px', fontWeight: 900, color: '#ffffff' }}>
-                {formatCountdown(secondsLeft, isLive)}
-              </span>
+              {nextEgg ? toTitleCase(nextEgg.name) : 'Sincronizando...'}
             </div>
 
+            {/* Tiempo Restante: Mismo tamaño y relieve 3D, ubicado al lado derecho */}
+            <div
+              style={{
+                fontSize: '20px',
+                fontWeight: 900,
+                color: isLive ? '#ff4d4d' : '#ffffff',
+                lineHeight: 1.1,
+                flexShrink: 0,
+                fontVariantNumeric: 'tabular-nums',
+                textShadow: isLive
+                  ? '-1.5px -1.5px 0 #1a1a1a, 1.5px -1.5px 0 #1a1a1a, -1.5px 1.5px 0 #1a1a1a, 1.5px 1.5px 0 #1a1a1a, 0 3px 0 rgba(239, 68, 68, 0.6)'
+                  : '-1.5px -1.5px 0 #1a1a1a, 1.5px -1.5px 0 #1a1a1a, -1.5px 1.5px 0 #1a1a1a, 1.5px 1.5px 0 #1a1a1a, 0 3px 0 rgba(0,0,0,0.5)',
+              }}
+            >
+              {formatCountdown(secondsLeft, isLive)}
+            </div>
+          </div>
+
+          {/* Fila de pastillas inferiores: Rareza, Zona y Probabilidad */}
+          <div style={{ display: 'flex', gap: '5px', marginTop: '10px', alignItems: 'center' }}>
             {/* Rareza (Emoji Discord: 🔮 / 🌌 / ✨) */}
             <div
               style={{
                 background: theme.badgeBg,
                 border: '2px solid #1a1a1a',
                 borderRadius: '8px',
-                padding: '3px 8px',
+                padding: '3px 7px',
                 boxShadow: theme.badgeShadow,
                 display: 'flex',
                 alignItems: 'center',
@@ -347,13 +357,13 @@ function EggPredictorContent() {
               <span style={{ fontSize: '10px', fontWeight: 900, color: '#ffffff' }}>{theme.label}</span>
             </div>
 
-            {/* Zona */}
+            {/* Zona con Bioma Discord */}
             <div
               style={{
                 background: '#0284c7',
                 border: '2px solid #1a1a1a',
                 borderRadius: '8px',
-                padding: '3px 8px',
+                padding: '3px 7px',
                 boxShadow: '0 2px 0 #075985',
                 display: 'flex',
                 alignItems: 'center',
@@ -445,7 +455,7 @@ function EggPredictorContent() {
                         fontSize: '11px',
                         color: '#ffffff',
                         fontWeight: 900,
-                        width: '90px',
+                        width: '78px',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -479,7 +489,7 @@ function EggPredictorContent() {
                         fontSize: '10px',
                         color: '#ffe259',
                         fontWeight: 900,
-                        width: '32px',
+                        width: '30px',
                         textAlign: 'right',
                         flexShrink: 0,
                       }}
@@ -503,7 +513,7 @@ export default function EggPredictorOverlay() {
       fallback={
         <div
           style={{
-            width: '310px',
+            width: '250px',
             padding: '16px',
             background: '#0a0a0c',
             borderRadius: '14px',
