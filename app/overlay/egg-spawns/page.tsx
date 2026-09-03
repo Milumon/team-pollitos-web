@@ -87,11 +87,13 @@ export default function EggSpawnsOverlay() {
   const [spawns, setSpawns] = useState<EggSpawn[]>([]);
   const [nowMs, setNowMs] = useState<number>(Date.now());
   const [isAlerting, setIsAlerting] = useState<boolean>(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [activeCarouselIdx, setActiveCarouselIdx] = useState<number>(0);
 
   // 1. Cargar historial inicial y polling de respaldo
   const fetchSpawns = async () => {
     try {
-      const res = await fetch('/api/egg-spawns?limit=5', { cache: 'no-store' });
+      const res = await fetch('/api/egg-spawns?limit=6', { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json)) {
@@ -119,8 +121,9 @@ export default function EggSpawnsOverlay() {
         (payload) => {
           if (payload.new) {
             const newSpawn = payload.new as EggSpawn;
-            setSpawns((prev) => [newSpawn, ...prev.filter((item) => item.id !== newSpawn.id)].slice(0, 5));
-            // Disparar animación de impacto en spawn
+            setSpawns((prev) => [newSpawn, ...prev.filter((item) => item.id !== newSpawn.id)].slice(0, 6));
+            // Forzar mostrar el nuevo spawn en pantalla principal
+            setActiveCarouselIdx(0);
             setIsAlerting(true);
             setTimeout(() => setIsAlerting(false), 18000);
           }
@@ -141,10 +144,31 @@ export default function EggSpawnsOverlay() {
     return () => clearInterval(timer);
   }, []);
 
-  const latestSpawn = spawns[0] || null;
-  const historySpawns = spawns.slice(1, 3);
-  const rarityKey = normalizeRarity(latestSpawn?.rarity);
+  // 4. Carrusel automático cuando hay múltiples huevos activos en el mapa (<25 min)
+  const activeEggs = spawns.filter((s) => {
+    const ageMin = (nowMs - new Date(s.created_at).getTime()) / (1000 * 60);
+    return ageMin <= 25; // Considerados activos en el mapa
+  });
+
+  useEffect(() => {
+    if (activeEggs.length <= 1 || isAlerting) return;
+
+    const carouselInterval = setInterval(() => {
+      setActiveCarouselIdx((prev) => (prev + 1) % activeEggs.length);
+    }, 6000); // Rota suavemente cada 6 segundos
+
+    return () => clearInterval(carouselInterval);
+  }, [activeEggs.length, isAlerting]);
+
+  // Selección del huevo en pantalla principal
+  const currentSpawn = (activeEggs.length > 0 ? activeEggs[activeCarouselIdx % activeEggs.length] : spawns[0]) || null;
+  const rarityKey = normalizeRarity(currentSpawn?.rarity);
   const theme = RARITY_THEME[rarityKey];
+
+  // Mini lista de los otros huevos
+  const otherSpawns = spawns.filter((s) => s.id !== currentSpawn?.id).slice(0, 2);
+
+  const hasValidImage = currentSpawn?.image_url && !failedImages.has(currentSpawn.image_url);
 
   return (
     <div
@@ -184,9 +208,9 @@ export default function EggSpawnsOverlay() {
           transform: isAlerting ? 'scale(1.02)' : 'scale(1)',
         }}
       >
-        {/* Nivel 1: Último Huevo Aparecido */}
+        {/* Nivel 1: Huevo Aparecido Principal */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Icono / Imagen con Glow */}
+          {/* Icono / Imagen con Glow y Fallback Seguro */}
           <div
             style={{
               width: '44px',
@@ -200,13 +224,18 @@ export default function EggSpawnsOverlay() {
               border: `0.5px solid ${theme.dividerColor}`,
               boxShadow: isAlerting ? `0 0 15px ${theme.glow}` : 'none',
               overflow: 'hidden',
-              padding: latestSpawn?.image_url ? '2px' : '0',
+              padding: hasValidImage ? '2px' : '0',
             }}
           >
-            {latestSpawn?.image_url ? (
+            {hasValidImage ? (
               <img
-                src={latestSpawn.image_url}
-                alt={latestSpawn.egg_name}
+                src={currentSpawn.image_url!}
+                alt={currentSpawn.egg_name}
+                onError={() => {
+                  if (currentSpawn.image_url) {
+                    setFailedImages((prev) => new Set(prev).add(currentSpawn.image_url!));
+                  }
+                }}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -246,9 +275,9 @@ export default function EggSpawnsOverlay() {
                   color: '#ffffff',
                 }}
               >
-                {latestSpawn ? toTitleCase(latestSpawn.egg_name) : 'Esperando Spawns...'}
+                {currentSpawn ? toTitleCase(currentSpawn.egg_name) : 'Esperando Spawns...'}
               </span>
-              {latestSpawn && (
+              {currentSpawn && (
                 <span
                   style={{
                     fontSize: '10px',
@@ -275,11 +304,11 @@ export default function EggSpawnsOverlay() {
                 textOverflow: 'ellipsis',
               }}
             >
-              {latestSpawn ? toTitleCase(latestSpawn.zone) : 'Conectando con Discord'}
+              {currentSpawn ? toTitleCase(currentSpawn.zone) : 'Conectando con Discord'}
             </div>
           </div>
 
-          {/* Estado de Spawn / Tiempo Transcurrido */}
+          {/* Estado / Tiempo Transcurrido */}
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div
               style={{
@@ -291,7 +320,7 @@ export default function EggSpawnsOverlay() {
                 letterSpacing: '-0.3px',
               }}
             >
-              {latestSpawn ? (isAlerting ? '🔥 ¡APARECIÓ!' : formatTimeAgo(latestSpawn.created_at, nowMs)) : '--'}
+              {currentSpawn ? (isAlerting ? '🔥 ¡APARECIÓ!' : formatTimeAgo(currentSpawn.created_at, nowMs)) : '--'}
             </div>
             <div
               style={{
@@ -301,7 +330,7 @@ export default function EggSpawnsOverlay() {
                 fontWeight: isAlerting ? 700 : 500,
               }}
             >
-              {isAlerting ? '¡En Vivo!' : 'Spawn Reciente'}
+              {activeEggs.length > 1 ? `Activo (${(activeCarouselIdx % activeEggs.length) + 1}/${activeEggs.length})` : (isAlerting ? '¡En Vivo!' : 'Spawn Reciente')}
             </div>
           </div>
         </div>
@@ -309,19 +338,25 @@ export default function EggSpawnsOverlay() {
         {/* Separador */}
         <div style={{ height: '0.5px', background: theme.dividerColor }} />
 
-        {/* Nivel 2: Mini Historial de Anteriores Spawns */}
+        {/* Nivel 2: Otros Huevos Activos o Recientes */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {historySpawns.length > 0 ? (
-            historySpawns.map((item) => {
+          {otherSpawns.length > 0 ? (
+            otherSpawns.map((item) => {
               const hRarityKey = normalizeRarity(item.rarity);
               const hTheme = RARITY_THEME[hRarityKey];
+              const isItemImgValid = item.image_url && !failedImages.has(item.image_url);
 
               return (
                 <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {item.image_url ? (
+                  {isItemImgValid ? (
                     <img
-                      src={item.image_url}
+                      src={item.image_url!}
                       alt={item.egg_name}
+                      onError={() => {
+                        if (item.image_url) {
+                          setFailedImages((prev) => new Set(prev).add(item.image_url!));
+                        }
+                      }}
                       style={{
                         width: '18px',
                         height: '18px',
